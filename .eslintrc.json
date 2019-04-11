@@ -3,7 +3,10 @@
         "browser": true,
         "es6": true
     },
-    "extends": "eslint:recommended",
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended"
+    ],
     "globals": {
         "Atomics": "readonly",
         "SharedArrayBuffer": "readonly"
@@ -20,16 +23,9 @@
         "react-hooks"
     ],
     "rules": {
-        "import/extensions": 0,
-        "import/no-extraneous-dependencies": 0,
-        "import/no-unresolved": [
-            2,
-            {
-                "ignore": [
-                    "electron"
-                ]
-            }
-        ],
+        "react/jsx-uses-react": "error",
+        "react/jsx-uses-vars": "error",
+        "react/prop-types": [0],
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn"
     }

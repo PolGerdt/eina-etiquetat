@@ -1,0 +1,23 @@
+.MenuBar {
+  display: flex;
+  justify-content: space-between;
+  background-color: #333;
+  align-items: stretch;
+  color: white;
+  padding: 0 1em;
+  height: 50px;
+}
+
+.MenuBar h1 {
+  margin: 0 1em 0 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.MenuBar .project-bar {
+
+}
+
+.MenuBar button {
+  height: 100%;
+}
