@@ -2,7 +2,7 @@ import './App.css'
 
 import React, { useState } from 'react'
 
-import MenuBar from '../components/MenuBar/MenuBar'
+import TopBar from '../components/TopBar/TopBar'
 import Buscar from './Search/Search'
 import Etiquetar from './Label/Label'
 
@@ -11,7 +11,7 @@ export default function App() {
 
   return (
     <div>
-      <MenuBar onChangeScene={setScene} />
+      <TopBar onChangeScene={setScene} />
       {(scene === 0) ? <Buscar /> : <Etiquetar />}
     </div>
   )

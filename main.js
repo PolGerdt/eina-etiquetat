@@ -1,7 +1,7 @@
 'use strict'
 
 // Import parts of electron to use
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, Menu } = require('electron')
 const path = require('path')
 const url = require('url')
 
@@ -62,7 +62,7 @@ function createWindow() {
   })
 
   // Emitted when the window is closed.
-  mainWindow.on('closed', function() {
+  mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
@@ -91,3 +91,44 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+// Create menu
+const template = [
+  {
+    label: 'Project',
+    submenu: [
+      { label: 'New', role: 'new' },
+      { label: 'Open', role: 'open' },
+      { label: 'Save', role: 'save' }
+    ]
+  },
+  {
+    label: 'App Settings',
+    submenu: [
+      { label: 'Set Youtube Data API Key', role: 'youtubeapi' }
+    ]
+  }
+]
+
+if (dev) {
+  template.push({
+    label: 'View',
+    submenu: [
+      { role: 'reload' },
+      { role: 'forcereload' },
+      { role: 'toggledevtools' },
+      { type: 'separator' },
+      { role: 'resetzoom' },
+      { role: 'zoomin' },
+      { role: 'zoomout' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  })
+}
+
+const menu = Menu.buildFromTemplate(template)
+Menu.setApplicationMenu(menu)
+
+
+
