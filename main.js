@@ -8,6 +8,7 @@ const url = require('url')
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
+let setApiKeyWindow
 
 // Keep a reference for dev mode
 let dev = false
@@ -28,6 +29,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 768,
+    title: 'Eina Etiquetat',
     show: false
   })
 
@@ -92,20 +94,63 @@ app.on('activate', () => {
   }
 })
 
+// Create a window to input the youtube data api key
+function createSetApiKeyWindow() {
+
+  setApiKeyWindow = new BrowserWindow({
+    width: 300,
+    height: 200,
+    title: 'Set YouTube API Key',
+    parent: mainWindow,
+    modal: true
+  })
+
+  setApiKeyWindow.setMenu(null)
+
+  let indexPath = url.format({
+    protocol: 'file:',
+    pathname: path.join(__dirname, 'src', 'setYoutubeApiKey.html'),
+    slashes: true
+  })
+
+  setApiKeyWindow.loadURL(indexPath)
+}
+
 // Create menu
 const template = [
   {
     label: 'Project',
     submenu: [
-      { label: 'New', role: 'new' },
-      { label: 'Open', role: 'open' },
-      { label: 'Save', role: 'save' }
+      {
+        label: 'New',
+        click() {
+
+        }
+      },
+      {
+        label: 'Open',
+        click() {
+
+        }
+      },
+      {
+        label: 'Save',
+        click() {
+
+        }
+      }
     ]
   },
   {
     label: 'App Settings',
     submenu: [
-      { label: 'Set Youtube Data API Key', role: 'youtubeapi' }
+      {
+        label: 'Set Youtube Data API Key',
+        click() {
+          // Open Set Youtube Data API Key window
+          createSetApiKeyWindow()
+        }
+      }
     ]
   }
 ]

@@ -1,17 +1,25 @@
 import './Search.css'
 
-import React, { useState } from 'react'
-import search from 'youtube-search'
+import React, { useState, useEffect } from 'react'
+import youtubeSearch from 'youtube-search'
 
 import SidePanel from '../../components/SidePanel/SidePanel'
 import CandidateVideosList from './CandidateVideosList'
+import SetYoutubeApiKey from './SetYoutubeApiKey'
+
+const Store = require('electron-store')
+const store = new Store();
 
 // Search scene where you can search videos to get candidates and filter them
 export default function Search() {
 
+  const [youtubeApiKey, setYoutubeApiKey] = useState('')
   const [textInput, setTextInput] = useState('')
-
   const [videos, setVideos] = useState([])
+
+  useEffect(() => {
+    setYoutubeApiKey(store.get('youtube-api-key', ''))
+  }, [] )
 
   function handleTextChange(e) {
     setTextInput(e.target.value)
@@ -22,14 +30,16 @@ export default function Search() {
 
     var opts = {
       maxResults: 10,
-      key: ''
+      key: store.get('youtube-api-key', '')
     }
 
-    search(textInput, opts, function (err, results) {
-      if (err) return console.log(err)
-      console.dir(results)
-
-      setVideos(results)
+    youtubeSearch(textInput, opts, function (err, results) {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log(results)
+        setVideos(results)
+      }
     })
   }
 
@@ -47,7 +57,12 @@ export default function Search() {
         </form>
       </SidePanel>
 
-      <CandidateVideosList videos={videos || ''} />
+      {
+        youtubeApiKey ?
+          <CandidateVideosList videos={videos || ''} />
+          :
+          <SetYoutubeApiKey />
+      }
 
       <SidePanel>
         <h2>Output</h2>
