@@ -10,7 +10,7 @@ export default function App() {
   const [scene, setScene] = useState(0)
 
   return (
-    <div>
+    <div className="App">
       <TopBar onChangeScene={setScene} />
       {(scene === 0) ? <Buscar /> : <Etiquetar />}
     </div>

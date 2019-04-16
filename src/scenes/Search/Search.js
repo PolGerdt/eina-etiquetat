@@ -4,42 +4,78 @@ import React, { useState, useEffect } from 'react'
 import youtubeSearch from 'youtube-search'
 
 import SidePanel from '../../components/SidePanel/SidePanel'
-import CandidateVideosList from './CandidateVideosList'
+import CandidateVideoCard from './CandidateVideoCard'
 import SetYoutubeApiKey from './SetYoutubeApiKey'
 
 const Store = require('electron-store')
-const store = new Store();
+const fs = require('fs')
+const { dialog } = require('electron').remote
+
+const store = new Store()
 
 // Search scene where you can search videos to get candidates and filter them
 export default function Search() {
 
-  const [youtubeApiKey, setYoutubeApiKey] = useState('')
   const [textInput, setTextInput] = useState('')
-  const [videos, setVideos] = useState([])
-
-  useEffect(() => {
-    setYoutubeApiKey(store.get('youtube-api-key', ''))
-  }, [] )
-
   function handleTextChange(e) {
     setTextInput(e.target.value)
   }
 
+  const [youtubeApiKey, setYoutubeApiKey] = useState('')
+  useEffect(() => {
+    setYoutubeApiKey(store.get('youtube-api-key', ''))
+  }, [])
+
+  // All candidate videos with youtube data and isAccepted state
+  const [candidateVideos, setCandidateVideos] = useState([])
   function handleSubmit(e) {
     e.preventDefault()
 
-    var opts = {
-      maxResults: 10,
-      key: store.get('youtube-api-key', '')
+    setYoutubeApiKey(store.get('youtube-api-key', ''))
+
+    if (!youtubeApiKey) {
+      return
     }
 
-    youtubeSearch(textInput, opts, function (err, results) {
+    var opts = {
+      maxResults: 10,
+      key: youtubeApiKey,
+      type: 'video'
+      // order?
+    }
+
+    youtubeSearch(textInput, opts, function (err, youtubeResults) {
       if (err) {
         console.log(err)
       } else {
-        console.log(results)
-        setVideos(results)
+        console.log(youtubeResults)
+        let searchCandidateVideos = youtubeResults.map(result =>
+          ({ youtubeData: result, isAccepted: false })
+        )
+        setCandidateVideos(searchCandidateVideos)
       }
+    })
+  }
+
+  function handleVideoCardClick(id) {
+    // Toggle the accepted state of the clicked video
+    let updatedCandidateVideos = candidateVideos.map(
+      (candidate) => (candidate.youtubeData.id === id) ?
+        ({ youtubeData: candidate.youtubeData, isAccepted: !candidate.isAccepted })
+        :
+        candidate
+    )
+    setCandidateVideos(updatedCandidateVideos)
+  }
+
+  function saveAcceptedCandidatesId() {
+    dialog.showSaveDialog(null, null, (filename) => {
+      let acceptedCandidatesId = candidateVideos
+        .filter(candidate => candidate.isAccepted)
+        .map(accepted => ({ id: accepted.youtubeData.id }))
+
+      let data = JSON.stringify(acceptedCandidatesId)
+      fs.writeFileSync(filename + '.json', data)
     })
   }
 
@@ -58,8 +94,16 @@ export default function Search() {
       </SidePanel>
 
       {
-        youtubeApiKey ?
-          <CandidateVideosList videos={videos || ''} />
+        (youtubeApiKey) ?
+          <div className="candidateVideosList">
+            {candidateVideos.map(candidateVideo =>
+              <CandidateVideoCard
+                videoData={candidateVideo}
+                onClickCard={() => handleVideoCardClick(candidateVideo.youtubeData.id)}
+                key={candidateVideo.youtubeData.id}
+              />
+            )}
+          </div>
           :
           <SetYoutubeApiKey />
       }
@@ -70,7 +114,7 @@ export default function Search() {
         <button>Start download</button>
         <h3>Filtered videos list</h3>
         <button>Load list</button>
-        <button>Export list</button>
+        <button onClick={saveAcceptedCandidatesId}>Save filtered list</button>
       </SidePanel>
     </div>
   )

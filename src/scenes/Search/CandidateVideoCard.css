@@ -1,3 +1,30 @@
 .CandidateVideoCard {
-  
+  background-color: #ddd;
+  width: 100%;
+  border: 5px solid #333;
+}
+
+.accepted {
+  border-color: #0f0;
+}
+
+.rejected {
+  border-color: #f00;
+}
+
+.CandidateVideoCard:hover {
+  cursor: pointer;
+}
+
+.CandidateVideoCard img {
+  width: 100%;
+}
+
+.CandidateVideoCard p {
+  font-size: 1em;
+  margin: 0;
+}
+
+.CandidateVideoCard .video-info {
+  padding: 0.5em 1em;
 }
