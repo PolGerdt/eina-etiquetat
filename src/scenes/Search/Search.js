@@ -45,10 +45,7 @@ export default function Search() {
     }
 
     youtubeSearch(textInput, opts, function (err, youtubeResults) {
-      if (err) {
-        console.log(err)
-      } else {
-        console.log(youtubeResults)
+      if (!err) {
         let searchCandidateVideos = youtubeResults.map(result =>
           ({ youtubeData: result, isAccepted: false })
         )
