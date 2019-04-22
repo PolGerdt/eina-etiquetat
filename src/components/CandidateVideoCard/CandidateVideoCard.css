@@ -1,0 +1,33 @@
+.CandidateVideoCard {
+  background-color: #ddd;
+  width: 100%;
+  border: 5px solid #333;
+}
+
+.CandidateVideoCard img {
+  width: 100%;
+}
+
+.CandidateVideoCard .video-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.CandidateVideoCard .video-title {
+  font-size: 1em;
+  margin: 0.5em;
+}
+
+.CandidateVideoCard .download-video-info {
+  display: flex;
+  flex-direction: row;
+}
+
+.CandidateVideoCard .download-video-info p {
+  margin: 0.5em;
+}
+
+.CandidateVideoCard .download-video-info button {
+  padding: 0.5em 1em;
+}

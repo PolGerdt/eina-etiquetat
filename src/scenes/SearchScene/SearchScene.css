@@ -1,15 +1,11 @@
-.Search {
+.SearchScene {
   display: flex;
   justify-content: space-between;
 }
 
-.Search .candidateVideosList {
+.SearchScene .candidate-videos-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-gap: 10px;
   padding: 10px;
-  width: 50%;
-
-  height: calc(100vh - 50px);
-  overflow-y: scroll;
 }
