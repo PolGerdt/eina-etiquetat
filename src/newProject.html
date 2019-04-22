@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>New Project</title>
+</head>
+
+<body>
+  <form id="input-form">
+    <div>
+      <button id="open-folder">Select an empty folder</button>
+      <p id="folder-name"></p>
+    </div>
+
+    <div>
+      <label>
+        Project name
+        <input type="text" id="project-name"></input>
+      </label>
+    </div>
+
+    <div>
+      <label>
+        Enter your Youtube Data API key
+        <input type="text" id="api-key"></input>
+      </label>
+    </div>
+
+    <button type="submit">Save</button>
+  </form>
+
+  <script>
+    const { getCurrentWindow, app, dialog } = require('electron').remote
+    const fs = require('fs')
+    const path = require('path')
+    const Store = require('electron-store')
+
+    let store
+
+    const formEl = document.getElementById('input-form')
+    const projectNameInputEl = document.getElementById('project-name')
+    const apiKeyInputEl = document.getElementById('api-key')
+    const folderButtonEl = document.getElementById('open-folder')
+    const folderNameEl = document.getElementById('folder-name')
+
+    let isFolderSet = false
+
+    folderButtonEl.addEventListener('click', () => {
+      const options = {
+        properties: ['openDirectory']
+      }
+      dialog.showOpenDialog(null, options, (directoryPaths) => {
+        app.setPath('userData', directoryPaths[0])
+
+        folderNameEl.textContent = directoryPaths[0]
+
+        isFolderSet = true
+      })
+    })
+
+    formEl.addEventListener('submit', (e) => {
+      e.preventDefault()
+
+      if (isFolderSet) {
+        // Create project folders
+        const projectDataPath = path.join(app.getPath('userData'), 'project_data')
+        const downloadedVideosPath = path.join(app.getPath('userData'), 'downloaded_videos')
+        fs.mkdirSync(projectDataPath)
+        fs.mkdirSync(downloadedVideosPath)
+        fs.mkdirSync(path.join(downloadedVideosPath, 'videos_full'))
+        fs.mkdirSync(path.join(downloadedVideosPath, 'videos_segments'))
+
+        // Store project data
+        store = new Store()
+        store.set('project-name', projectNameInputEl.value)
+        store.set('youtube-api-key', apiKeyInputEl.value)
+
+        var window = getCurrentWindow()
+        window.close()
+      }
+
+    })
+  </script>
+</body>
+
+</html>

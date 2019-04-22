@@ -21,10 +21,10 @@
   </form>
 
   <script>
-    const remote = require('electron').remote;
+    const remote = require('electron').remote
     const Store = require('electron-store')
 
-    const store = new Store();
+    const store = new Store()
 
     const messageEl = document.getElementById('message')
     const formEl = document.getElementById('input-form')
@@ -44,8 +44,8 @@
       let inputKey = inputEl.value
       store.set('youtube-api-key', inputKey)
 
-      var window = remote.getCurrentWindow();
-      window.close();
+      var window = remote.getCurrentWindow()
+      window.close()
     })
   </script>
 </body>

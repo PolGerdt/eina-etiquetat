@@ -1,17 +1,13 @@
 'use strict'
 
 // Import parts of electron to use
-const { app, BrowserWindow, Menu, dialog } = require('electron')
+const { app, BrowserWindow, Menu } = require('electron')
 const path = require('path')
 const url = require('url')
 
-// Import other modules
-const fs = require('fs')
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
-let setApiKeyWindow
+let mainWindow, setApiKeyWindow, newProjectWindow
 
 // Keep a reference for dev mode
 let dev = false
@@ -119,6 +115,32 @@ function createSetApiKeyWindow() {
   setApiKeyWindow.loadURL(indexPath)
 }
 
+function createNewProjectWindow() {
+
+  newProjectWindow = new BrowserWindow({
+    width: 300,
+    height: 200,
+    title: 'New Project',
+    parent: mainWindow,
+    modal: true
+  })
+
+  newProjectWindow.setMenu(null)
+
+  let indexPath = url.format({
+    protocol: 'file:',
+    pathname: path.join(__dirname, 'src', 'newProject.html'),
+    slashes: true
+  })
+
+  newProjectWindow.loadURL(indexPath)
+
+  newProjectWindow.on('closed', () => {
+    mainWindow.reload()
+    newProjectWindow = null
+  })
+}
+
 // Create menu
 const template = [
   {
@@ -127,24 +149,11 @@ const template = [
       {
         label: 'New',
         click() {
-          const options = {
-            properties: ['openDirectory']
+          createNewProjectWindow()
+
+          if (dev) {
+            newProjectWindow.webContents.openDevTools()
           }
-          dialog.showOpenDialog(null, options, (directoryPaths) => {
-            app.setPath('userData', directoryPaths[0])
-
-            const projectDataPath = path.join(app.getPath('userData'), 'project_data')
-            const downloadedVideosPath = path.join(app.getPath('userData'), 'downloaded_videos')
-
-            fs.mkdirSync(projectDataPath)
-            fs.mkdirSync(downloadedVideosPath)
-            fs.mkdirSync(path.join(downloadedVideosPath, 'videos_full'))
-            fs.mkdirSync(path.join(downloadedVideosPath, 'videos_segments'))
-
-            let data = JSON.stringify({ test: true })
-
-            fs.writeFileSync(path.join(projectDataPath, 'test.json'), data)
-          })
         }
       },
       {
