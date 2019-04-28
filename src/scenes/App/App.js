@@ -22,8 +22,9 @@ export default function App() {
   /*
     candidateVideo = {
       youtubeData: {},
-      downloadState: 'downloading', 'none' / 'requested' / 'downloading' / 'downloaded'
-      downloadPercent: 0
+      downloadState: 'none' / 'requested' / 'downloading' / 'downloaded'
+      downloadPercent: 0,
+      isSelected: false
     }
   */
 
@@ -31,34 +32,76 @@ export default function App() {
   const [youtubeApiKey, setYoutubeApiKey] = useState('')
   useEffect(() => {
     setYoutubeApiKey(store.get('youtube-api-key', ''))
-  }, []) // store
+  }, [])
 
-  function searchVideos(textQuery) {
+  function searchVideos(query) {
     if (!youtubeApiKey) {
       return
     }
 
     var opts = {
-      maxResults: 10,
       key: youtubeApiKey,
+      maxResults: 10,
       type: 'video',
-      videoDuration: 'short'
-      // order?
+      videoDuration: 'short',
+      ...query.options
     }
 
-    youtubeSearch(textQuery, opts, function (err, youtubeResults) {
+    youtubeSearch(query.text, opts, function (err, youtubeResults) {
       if (err) throw err
 
       let searchCandidateVideos = youtubeResults.map(result => (
         {
           youtubeData: result,
           downloadState: 'none',
-          downloadPercent: 0
+          downloadPercent: 0,
+          isSelected: false
         }
       ))
 
       setCandidateVideos(searchCandidateVideos)
     })
+  }
+
+  function toggleVideoSelection(videoId) {
+    setCandidateVideos(previousVideos =>
+      previousVideos.map(video => (video.youtubeData.id === videoId) ?
+        (
+          {
+            ...video,
+            isSelected: !video.isSelected,
+          }
+        )
+        :
+        video
+      )
+    )
+  }
+
+  function selectAllVideos() {
+    setCandidateVideos(previousVideos =>
+      previousVideos.map(video =>
+        (
+          {
+            ...video,
+            isSelected: true,
+          }
+        )
+      )
+    )
+  }
+
+  function invertSelectionAllVideos() {
+    setCandidateVideos(previousVideos =>
+      previousVideos.map(video =>
+        (
+          {
+            ...video,
+            isSelected: !video.isSelected,
+          }
+        )
+      )
+    )
   }
 
   function handleDownloadVideoRequest(videoId) {
@@ -137,18 +180,27 @@ export default function App() {
   }
 
   function onVideoDownloaded(videoId) {
+    let videoData = null
+
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        (
-          {
+      previousVideos.map(video => {
+        if (video.youtubeData.id === videoId) {
+          videoData = {
             ...video,
             downloadState: 'downloaded',
+            isSelected: false,
           }
-        )
-        :
-        video
-      )
+          return videoData
+        } else {
+          return video
+        }
+      })
     )
+
+    // Save data for the downloaded videos
+    let updatedDownloadedVideosData = store.get('downloaded-videos')
+    updatedDownloadedVideosData.push(videoData)
+    store.set('downloaded-videos', updatedDownloadedVideosData)
   }
 
   let requestedVideoIds = candidateVideos
@@ -165,6 +217,25 @@ export default function App() {
     downloadVideo(requestedVideoIds[0])
   }
 
+  function handleCancelDownload(videoId) {
+    // todo
+  }
+
+  // Set all selected videos to requested download state
+  function downloadSelectedVideos() {
+    setCandidateVideos(previousVideos =>
+      previousVideos.map(video => (video.isSelected) ?
+        (
+          {
+            ...video,
+            downloadState: 'requested',
+          }
+        )
+        :
+        video
+      )
+    )
+  }
 
   // Scene setup
   const [currentScene, setCurrentScene] = useState(0)
@@ -174,14 +245,20 @@ export default function App() {
         return (
           <SearchScene
             videos={candidateVideos}
-            onTextSubmit={searchVideos}
+            onCardClick={toggleVideoSelection}
+            onSelectAll={selectAllVideos}
+            onInvertSelection={invertSelectionAllVideos}
+            onSubmitSearch={searchVideos}
             onDownloadVideoRequest={handleDownloadVideoRequest}
-            onCancelDownload={() => null}
+            onCancelDownload={handleCancelDownload}
+            onClickDownloadSelectedVideos={downloadSelectedVideos}
           />
         )
       case 1:
         return (
-          <LabelScene />
+          <LabelScene
+            loadedVideosData={candidateVideos.filter(candidate => candidate.downloadState === 'downloaded')}
+          />
         )
     }
   }

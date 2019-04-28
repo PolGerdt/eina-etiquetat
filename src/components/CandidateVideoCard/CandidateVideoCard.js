@@ -2,14 +2,17 @@ import './CandidateVideoCard.css'
 
 import React from 'react'
 
-export default function CandidateVideoCard({ videoData, onRequestDownload, onCancelDownload }) {
+export default function CandidateVideoCard({ videoData, onRequestDownload, onCancelDownload, onClick }) {
 
   const { youtubeData, downloadState, downloadPercent } = videoData
 
   const formattedDownloadPercent = Math.round(100 * downloadPercent)
 
   return (
-    <div className='CandidateVideoCard' >
+    <div
+      className={'CandidateVideoCard' + (videoData.isSelected ? ' selected-card' : '')}
+      onClick={onClick}
+    >
       <img src={youtubeData.thumbnails.medium.url}></img>
 
       <div className="video-info">

@@ -75,6 +75,7 @@
         store = new Store()
         store.set('project-name', projectNameInputEl.value)
         store.set('youtube-api-key', apiKeyInputEl.value)
+        store.set('downloaded-videos', [])
 
         var window = getCurrentWindow()
         window.close()

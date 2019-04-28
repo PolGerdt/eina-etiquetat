@@ -4,6 +4,14 @@
   border: 5px solid #333;
 }
 
+.CandidateVideoCard:hover {
+  cursor: pointer;
+}
+
+.selected-card {
+  border: 5px solid #0f0;
+}
+
 .CandidateVideoCard img {
   width: 100%;
 }
@@ -11,7 +19,6 @@
 .CandidateVideoCard .video-info {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .CandidateVideoCard .video-title {
@@ -22,6 +29,7 @@
 .CandidateVideoCard .download-video-info {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
 }
 
 .CandidateVideoCard .download-video-info p {

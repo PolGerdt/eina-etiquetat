@@ -1,7 +1,7 @@
 'use strict'
 
 // Import parts of electron to use
-const { app, BrowserWindow, Menu } = require('electron')
+const { app, BrowserWindow, Menu, dialog } = require('electron')
 const path = require('path')
 const url = require('url')
 
@@ -29,6 +29,9 @@ function createWindow() {
     width: 1024,
     height: 768,
     title: 'Eina Etiquetat',
+    webPreferences: {
+      webSecurity: false // To load videos from other folders. Only needed in dev mode ?
+    },
     show: false
   })
 
@@ -159,13 +162,13 @@ const template = [
       {
         label: 'Open',
         click() {
-
-        }
-      },
-      {
-        label: 'Save',
-        click() {
-
+          const options = {
+            properties: ['openDirectory']
+          }
+          dialog.showOpenDialog(null, options, (directoryPaths) => {
+            app.setPath('userData', directoryPaths[0])
+            mainWindow.reload()
+          })
         }
       }
     ]
