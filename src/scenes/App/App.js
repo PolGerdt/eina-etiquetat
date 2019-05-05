@@ -28,12 +28,13 @@ export default function App() {
     }
   */
 
-  // Search videos with youtube data api
   const [youtubeApiKey, setYoutubeApiKey] = useState('')
   useEffect(() => {
     setYoutubeApiKey(store.get('youtube-api-key', ''))
+    setProjectLabels(store.get('project-labels', []))
   }, [])
 
+  // Search videos with youtube data api
   function searchVideos(query) {
     if (!youtubeApiKey) {
       return
@@ -66,13 +67,7 @@ export default function App() {
   function toggleVideoSelection(videoId) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        (
-          {
-            ...video,
-            isSelected: !video.isSelected,
-          }
-        )
-        :
+        { ...video, isSelected: !video.isSelected, } :
         video
       )
     )
@@ -80,40 +75,20 @@ export default function App() {
 
   function selectAllVideos() {
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video =>
-        (
-          {
-            ...video,
-            isSelected: true,
-          }
-        )
-      )
+      previousVideos.map(video => ({ ...video, isSelected: true, }))
     )
   }
 
   function invertSelectionAllVideos() {
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video =>
-        (
-          {
-            ...video,
-            isSelected: !video.isSelected,
-          }
-        )
-      )
+      previousVideos.map(video => ({ ...video, isSelected: !video.isSelected, }))
     )
   }
 
   function handleDownloadVideoRequest(videoId) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        (
-          {
-            ...video,
-            downloadState: 'requested',
-          }
-        )
-        :
+        { ...video, downloadState: 'requested' } :
         video
       )
     )
@@ -152,13 +127,7 @@ export default function App() {
   function onDownloadStart(videoId) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        (
-          {
-            ...video,
-            downloadState: 'downloading',
-          }
-        )
-        :
+        { ...video, downloadState: 'downloading' } :
         video
       )
     )
@@ -167,39 +136,30 @@ export default function App() {
   function onVideoDownloadProgress(videoId, percentage) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        (
-          {
-            ...video,
-            downloadPercent: percentage,
-          }
-        )
-        :
+        { ...video, downloadPercent: percentage } :
         video
       )
     )
   }
 
   function onVideoDownloaded(videoId) {
-    let videoData = null
+    let videoData = candidateVideos.find(video => video.youtubeData.id === videoId)
 
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video => {
-        if (video.youtubeData.id === videoId) {
-          videoData = {
-            ...video,
-            downloadState: 'downloaded',
-            isSelected: false,
-          }
-          return videoData
-        } else {
-          return video
-        }
-      })
-    )
+      previousVideos.map(video => (video.youtubeData.id === videoId) ?
+        { ...video, downloadState: 'downloaded', isSelected: false, } :
+        video
+      ))
 
     // Save data for the downloaded videos
     let updatedDownloadedVideosData = store.get('downloaded-videos')
-    updatedDownloadedVideosData.push(videoData)
+
+    updatedDownloadedVideosData.push({
+      ...videoData,
+      downloadState: 'downloaded',
+      isSelected: false
+    })
+
     store.set('downloaded-videos', updatedDownloadedVideosData)
   }
 
@@ -218,23 +178,110 @@ export default function App() {
   }
 
   function handleCancelDownload(videoId) {
-    // todo
+    // Set candidate videos download state
+    // Cancel download stream
+    // Delete video file if created
   }
 
   // Set all selected videos to requested download state
   function downloadSelectedVideos() {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.isSelected) ?
-        (
-          {
-            ...video,
-            downloadState: 'requested',
-          }
-        )
-        :
+        { ...video, downloadState: 'requested' } :
         video
       )
     )
+  }
+
+  function getVideoUrl(videoId) {
+    let videoPath = path.join(
+      app.getPath('userData'),
+      'downloaded_videos',
+      'videos_full',
+      videoId + '.mp4'
+    )
+    return videoPath
+  }
+
+  // Read downloaded videos data from project
+  const downloadedVideos = store.get('downloaded-videos', [])
+  const downloadedVideoUrls = downloadedVideos.reduce((urlsObj, videoData) => (
+    { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }
+  ), {})
+
+  const [projectLabels, setProjectLabels] = useState(store.get('project-labels', []))
+  function addProjectLabel(name) {
+    const newProjectLabels = [...projectLabels, name]
+    setProjectLabels(newProjectLabels)
+    store.set('project-labels', newProjectLabels)
+  }
+  function deleteProjectLabel(name) {
+    let newProjectLabels = projectLabels.filter(previousName => previousName !== name)
+    setProjectLabels(newProjectLabels)
+    store.set('project-labels', newProjectLabels)
+
+    setAssignedVideoLabels(previous =>
+      previous.map(videoLabel =>
+        (
+          {
+            videoId: videoLabel.id,
+            labels: videoLabel.labels.filter(label => label.name !== name)
+          }
+        )
+      )
+    )
+  }
+
+  const [assignedVideoLabels, setAssignedVideoLabels] = useState(
+    downloadedVideos.map(videoData => ({ videoId: videoData.youtubeData.id, labels: [] }))
+  )
+  /*
+  [
+    {
+      videoId: '',
+      labels: []
+    }
+  ]
+  */
+  function assignLabel(videoId, label) {
+
+    setAssignedVideoLabels(previous =>
+      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+        (
+          {
+            videoId: videoLabel.videoId,
+            labels: [label, ...videoLabel.labels]
+          }
+        )
+        :
+        videoLabel
+      )
+    )
+  }
+
+  function deleteAssignedLabel(videoId, labelId) {
+
+    setAssignedVideoLabels(previous =>
+      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+        (
+          {
+            videoId: videoLabel.videoId,
+            labels: videoLabel.labels.filter(label => label.id !== labelId)
+          }
+        )
+        :
+        videoLabel
+      )
+    )
+  }
+
+  function saveAssignedLabels() {
+    const labelsPath = path.join(
+      app.getPath('userData'),
+      'project_data',
+      'labels.json'
+    )
+    fs.writeFileSync(labelsPath, JSON.stringify(assignedVideoLabels))
   }
 
   // Scene setup
@@ -257,7 +304,15 @@ export default function App() {
       case 1:
         return (
           <LabelScene
-            loadedVideosData={candidateVideos.filter(candidate => candidate.downloadState === 'downloaded')}
+            downloadedVideosData={downloadedVideos}
+            videoUrls={downloadedVideoUrls}
+            assignedVideoLabels={assignedVideoLabels}
+            projectLabels={projectLabels}
+            onAddProjectLabel={addProjectLabel}
+            onDeleteProjectLabel={deleteProjectLabel}
+            onAssignLabel={assignLabel}
+            onDeleteAssignedLabel={deleteAssignedLabel}
+            onClickSaveLabels={saveAssignedLabels}
           />
         )
     }

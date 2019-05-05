@@ -1,0 +1,14 @@
+.TimeLabel {
+  /* background-color: #bbb; */
+  position: relative;
+  margin-bottom: 0.5em;
+  border-top: 0.5em solid grey;
+}
+
+.TimeLabel .label-info {
+  display: flex;
+}
+
+.TimeLabel p {
+  margin: 0;
+}

@@ -1,7 +1,7 @@
 .CandidateVideoCard {
   background-color: #ddd;
   width: 100%;
-  border: 5px solid #333;
+  border: 0.7em solid #333;
 }
 
 .CandidateVideoCard:hover {
@@ -9,7 +9,7 @@
 }
 
 .selected-card {
-  border: 5px solid #0f0;
+  border: 0.7em solid #0f0;
 }
 
 .CandidateVideoCard img {
