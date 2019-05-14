@@ -1,0 +1,20 @@
+.LabelWorkspace {
+  display: flex;
+  justify-content: space-between;
+}
+
+.LabelWorkspace .main-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2em;
+}
+
+.main-label {}
+
+.main-label .choose-label-list {}
+
+.main-label .labels-list {
+  padding: 1em 0;
+  position: relative;
+}

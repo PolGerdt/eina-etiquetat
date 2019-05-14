@@ -1,24 +1,36 @@
-import './App.css'
+import './ProjectScreen.css'
 
 import React, { useState, useEffect } from 'react'
+
+import TopBar from '../components/TopBar'
+import SearchWorkspace from './SearchWorkspace'
+import LabelWorkspace from './LabelWorkspace'
+
 import youtubeSearch from 'youtube-search'
+import JsonDB from 'node-json-db'
 
-import TopBar from '../../components/TopBar/TopBar'
-import SearchScene from '../SearchScene/SearchScene'
-import LabelScene from '../LabelScene/LabelScene'
-
-const { app } = require('electron').remote
-const fs = require('fs')
+const { app, dialog } = require('electron').remote
 const path = require('path')
+const fs = require('fs')
+
 const ytdl = require('ytdl-core')
-const Store = require('electron-store')
 
-const store = new Store()
+const projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
 
-export default function App() {
+function useProjectDataFieldDb(field, defaultState) {
+
+  const [fieldData, setFieldData] = useState(projectDataDb.getData('/' + field) || defaultState)
+
+  useEffect(() => {
+    projectDataDb.push('/' + field, fieldData)
+  }, [field, fieldData])
+
+  return [fieldData, setFieldData]
+}
+
+export default function ProjectScreen({ youtubeApiKey }) {
 
   const [candidateVideos, setCandidateVideos] = useState([])
-
   /*
     candidateVideo = {
       youtubeData: {},
@@ -28,17 +40,33 @@ export default function App() {
     }
   */
 
-  const [youtubeApiKey, setYoutubeApiKey] = useState('')
-  useEffect(() => {
-    setYoutubeApiKey(store.get('youtube-api-key', ''))
-    setProjectLabels(store.get('project-labels', []))
-  }, [])
+  // Get all stored data from the app (api key) and from the project (name, labels, folder)
+  const [projectConfigDb, setProjectConfigDb] = useProjectDataFieldDb('config', {})
+  const [downloadedVideosDb, setDownloadedVideosDb] = useProjectDataFieldDb('downloadedVideos', [])
+  /*
+  [
+    {
+      youtubeData: {},
+      downloadState: downloaded,
+      downloadPercent: 100,
+      isSelected: false
+    }
+  ]
+  
+  */
+  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb('assignedLabels', [])
+  /*
+  [
+    {
+      videoId: '',
+      labels: []
+    }
+  ]
+  */
 
   // Search videos with youtube data api
   function searchVideos(query) {
-    if (!youtubeApiKey) {
-      return
-    }
+    if (!youtubeApiKey) return
 
     var opts = {
       key: youtubeApiKey,
@@ -85,18 +113,7 @@ export default function App() {
     )
   }
 
-  function handleDownloadVideoRequest(videoId) {
-    setCandidateVideos(previousVideos =>
-      previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadState: 'requested' } :
-        video
-      )
-    )
-  }
-
   function downloadVideo(downloadVideoId) {
-
-    onDownloadStart(downloadVideoId)
 
     const options = {
       quality: 'lowestvideo',
@@ -107,7 +124,7 @@ export default function App() {
 
     const videoPath = path.join(
       app.getPath('userData'),
-      'downloaded_videos', 'videos_full', downloadVideoId + '.mp4'
+      'videos_full', downloadVideoId + '.mp4'
     )
 
     const ytStream = ytdl(videoUrl, options)
@@ -124,19 +141,10 @@ export default function App() {
     })
   }
 
-  function onDownloadStart(videoId) {
-    setCandidateVideos(previousVideos =>
-      previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadState: 'downloading' } :
-        video
-      )
-    )
-  }
-
   function onVideoDownloadProgress(videoId, percentage) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadPercent: percentage } :
+        { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
         video
       )
     )
@@ -147,20 +155,20 @@ export default function App() {
 
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadState: 'downloaded', isSelected: false, } :
+        { ...video, downloadState: 'downloaded', isSelected: false } :
         video
       ))
 
-    // Save data for the downloaded videos
-    let updatedDownloadedVideosData = store.get('downloaded-videos')
-
-    updatedDownloadedVideosData.push({
-      ...videoData,
-      downloadState: 'downloaded',
-      isSelected: false
-    })
-
-    store.set('downloaded-videos', updatedDownloadedVideosData)
+    setDownloadedVideosDb(previous =>
+      [
+        ...previous,
+        {
+          ...videoData,
+          downloadState: 'downloaded',
+          isSelected: false
+        }
+      ]
+    )
   }
 
   let requestedVideoIds = candidateVideos
@@ -177,12 +185,6 @@ export default function App() {
     downloadVideo(requestedVideoIds[0])
   }
 
-  function handleCancelDownload(videoId) {
-    // Set candidate videos download state
-    // Cancel download stream
-    // Delete video file if created
-  }
-
   // Set all selected videos to requested download state
   function downloadSelectedVideos() {
     setCandidateVideos(previousVideos =>
@@ -193,75 +195,26 @@ export default function App() {
     )
   }
 
-  function getVideoUrl(videoId) {
-    let videoPath = path.join(
-      app.getPath('userData'),
-      'downloaded_videos',
-      'videos_full',
-      videoId + '.mp4'
-    )
-    return videoPath
-  }
-
-  // Read downloaded videos data from project
-  const downloadedVideos = store.get('downloaded-videos', [])
-  const downloadedVideoUrls = downloadedVideos.reduce((urlsObj, videoData) => (
-    { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }
-  ), {})
-
-  const [projectLabels, setProjectLabels] = useState(store.get('project-labels', []))
-  function addProjectLabel(name) {
-    const newProjectLabels = [...projectLabels, name]
-    setProjectLabels(newProjectLabels)
-    store.set('project-labels', newProjectLabels)
-  }
-  function deleteProjectLabel(name) {
-    let newProjectLabels = projectLabels.filter(previousName => previousName !== name)
-    setProjectLabels(newProjectLabels)
-    store.set('project-labels', newProjectLabels)
-
-    setAssignedVideoLabels(previous =>
-      previous.map(videoLabel =>
-        (
-          {
-            videoId: videoLabel.id,
-            labels: videoLabel.labels.filter(label => label.name !== name)
-          }
-        )
-      )
-    )
-  }
-
-  const [assignedVideoLabels, setAssignedVideoLabels] = useState(
-    downloadedVideos.map(videoData => ({ videoId: videoData.youtubeData.id, labels: [] }))
-  )
-  /*
-  [
-    {
-      videoId: '',
-      labels: []
-    }
-  ]
-  */
+  // Creates a labels object if it does not exist or appends the new label to existing 
   function assignLabel(videoId, label) {
+    setAssignedVideoLabelsDb(previous => {
+      const videoAssignedLabels = previous.find(videoLabel => videoLabel.videoId === videoId)
 
-    setAssignedVideoLabels(previous =>
-      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
-        (
-          {
-            videoId: videoLabel.videoId,
-            labels: [label, ...videoLabel.labels]
-          }
+      if (videoAssignedLabels === undefined) {
+        return [...previous, { videoId, labels: [label] }]
+      } else {
+        return previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+          ({ videoId: videoLabel.videoId, labels: [label, ...videoLabel.labels] }) :
+          videoLabel
         )
-        :
-        videoLabel
-      )
+      }
+    }
     )
   }
 
   function deleteAssignedLabel(videoId, labelId) {
 
-    setAssignedVideoLabels(previous =>
+    setAssignedVideoLabelsDb(previous =>
       previous.map(videoLabel => (videoLabel.videoId === videoId) ?
         (
           {
@@ -275,14 +228,28 @@ export default function App() {
     )
   }
 
-  function saveAssignedLabels() {
-    const labelsPath = path.join(
-      app.getPath('userData'),
-      'project_data',
-      'labels.json'
-    )
-    fs.writeFileSync(labelsPath, JSON.stringify(assignedVideoLabels))
+  function exportAssignedLabels() {
+    const opts = {
+      title: 'Export labels',
+      defaultPath: app.getPath('userData'),
+      filters: [{
+        name: 'JSON',
+        extensions: ['json']
+      }]
+    }
+    dialog.showSaveDialog(null, opts, (filename) => {
+      fs.writeFileSync(filename, JSON.stringify(assignedVideoLabelsDb))
+    })
   }
+
+  function getVideoUrl(videoId) {
+    const videoPath = path.join(app.getPath('userData'), 'videos_full', videoId + '.mp4')
+    return videoPath
+  }
+
+  const downloadedVideoUrls = downloadedVideosDb.reduce((urlsObj, videoData) => (
+    { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }
+  ), {})
 
   // Scene setup
   const [currentScene, setCurrentScene] = useState(0)
@@ -290,39 +257,36 @@ export default function App() {
     switch (scene) {
       case 0:
         return (
-          <SearchScene
+          <SearchWorkspace
             videos={candidateVideos}
             onCardClick={toggleVideoSelection}
             onSelectAll={selectAllVideos}
             onInvertSelection={invertSelectionAllVideos}
             onSubmitSearch={searchVideos}
-            onDownloadVideoRequest={handleDownloadVideoRequest}
-            onCancelDownload={handleCancelDownload}
             onClickDownloadSelectedVideos={downloadSelectedVideos}
           />
         )
       case 1:
         return (
-          <LabelScene
-            downloadedVideosData={downloadedVideos}
+          <LabelWorkspace
+            downloadedVideosData={downloadedVideosDb}
             videoUrls={downloadedVideoUrls}
-            assignedVideoLabels={assignedVideoLabels}
-            projectLabels={projectLabels}
-            onAddProjectLabel={addProjectLabel}
-            onDeleteProjectLabel={deleteProjectLabel}
+            assignedVideoLabels={assignedVideoLabelsDb}
+            projectLabels={projectConfigDb.labels}
             onAssignLabel={assignLabel}
             onDeleteAssignedLabel={deleteAssignedLabel}
-            onClickSaveLabels={saveAssignedLabels}
+            onClickExportLabels={exportAssignedLabels}
           />
         )
     }
   }
 
   return (
-    <div className="App">
-      <TopBar onChangeScene={setCurrentScene} />
-
-      {getScene(currentScene)}
+    <div className="ProjectScreen">
+      <TopBar title={projectConfigDb.name} onChangeScene={setCurrentScene} />
+      {
+        getScene(currentScene)
+      }
     </div>
   )
 }

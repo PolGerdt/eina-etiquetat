@@ -1,17 +1,17 @@
-import './SearchScene.css'
+import './SearchWorkspace.css'
 
 import React, { useState } from 'react'
 
-import SidePanel from '../../components/SidePanel/SidePanel'
-import CandidateVideoCard from '../../components/CandidateVideoCard/CandidateVideoCard'
-import Main from '../../components/Main/Main'
+import SidePanel from '../components/SidePanel'
+import CandidateVideoCard from '../components/CandidateVideoCard'
+import Main from '../components/Main'
 
 // Search videos to get candidates and filter them
-export default function SearchScene({
+export default function SearchWorkspace({
   videos,
   onSelectAll, onInvertSelection, onCardClick,
   onSubmitSearch,
-  onDownloadVideoRequest, onCancelDownload, onClickDownloadSelectedVideos }) {
+  onClickDownloadSelectedVideos }) {
 
   const [textInput, setTextInput] = useState('')
   const [maxResults, setMaxResults] = useState(10)
@@ -51,7 +51,7 @@ export default function SearchScene({
   const [numCols, setNumCols] = useState(2)
 
   return (
-    <div className="SearchScene">
+    <div className="SearchWorkspace">
       <SidePanel>
         <h2>Input</h2>
         <h3>Search</h3>
@@ -147,8 +147,6 @@ export default function SearchScene({
             <CandidateVideoCard
               videoData={candidateVideo}
               onClick={() => onCardClick(candidateVideo.youtubeData.id)}
-              onRequestDownload={() => onDownloadVideoRequest(candidateVideo.youtubeData.id)}
-              onCancelDownload={() => onCancelDownload(candidateVideo.youtubeData.id)}
               key={candidateVideo.youtubeData.id}
             />
           )}

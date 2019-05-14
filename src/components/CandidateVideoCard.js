@@ -2,7 +2,7 @@ import './CandidateVideoCard.css'
 
 import React from 'react'
 
-export default function CandidateVideoCard({ videoData, onRequestDownload, onCancelDownload, onClick }) {
+export default function CandidateVideoCard({ videoData, onClick }) {
 
   const { youtubeData, downloadState, downloadPercent } = videoData
 
@@ -18,9 +18,8 @@ export default function CandidateVideoCard({ videoData, onRequestDownload, onCan
       <div className="video-info">
         <p className='video-title' dangerouslySetInnerHTML={{ __html: videoData.youtubeData.title }}></p>
         <div className='download-video-info'>
-          <button onClick={onRequestDownload} disabled={downloadState !== 'none'} > ▼ </button>
           <p>{formattedDownloadPercent} %</p>
-          <button onClick={onCancelDownload} disabled={downloadState !== 'downloading'}> X </button>
+          <p>{downloadState}</p>
         </div>
       </div>
     </div >

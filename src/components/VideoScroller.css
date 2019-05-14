@@ -1,0 +1,22 @@
+.VideoScroller {}
+
+.VideoScroller .video-range {}
+
+.VideoScroller video {
+  width: 100%;
+}
+
+.VideoScroller video {
+  width: 100%;
+}
+
+.VideoScroller .video-range {
+  width: 100%;
+}
+
+.VideoScroller .video-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: 1em;
+}

@@ -1,9 +1,9 @@
-.SearchScene {
+.SearchWorkspace {
   display: flex;
   justify-content: space-between;
 }
 
-.SearchScene .candidate-videos-grid {
+.SearchWorkspace .candidate-videos-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-gap: 10px;
