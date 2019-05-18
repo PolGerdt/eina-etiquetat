@@ -1,8 +1,10 @@
 import './ProjectScreen.css'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
-import TopBar from '../components/TopBar'
+import { Snackbar, IconButton } from '@material-ui/core'
+import CloseIcon from '@material-ui/icons/Close'
+
 import SearchWorkspace from './SearchWorkspace'
 import LabelWorkspace from './LabelWorkspace'
 
@@ -15,7 +17,7 @@ const fs = require('fs')
 
 const ytdl = require('ytdl-core')
 
-const projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+let projectDataDb = undefined
 
 function useProjectDataFieldDb(field, defaultState) {
 
@@ -28,7 +30,10 @@ function useProjectDataFieldDb(field, defaultState) {
   return [fieldData, setFieldData]
 }
 
-export default function ProjectScreen({ youtubeApiKey }) {
+export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig }) {
+
+  if (!projectDataDb)
+    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
 
   const [candidateVideos, setCandidateVideos] = useState([])
   /*
@@ -40,8 +45,6 @@ export default function ProjectScreen({ youtubeApiKey }) {
     }
   */
 
-  // Get all stored data from the app (api key) and from the project (name, labels, folder)
-  const [projectConfigDb, setProjectConfigDb] = useProjectDataFieldDb('config', {})
   const [downloadedVideosDb, setDownloadedVideosDb] = useProjectDataFieldDb('downloadedVideos', [])
   /*
   [
@@ -54,19 +57,22 @@ export default function ProjectScreen({ youtubeApiKey }) {
   ]
   
   */
-  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb('assignedLabels', [])
-  /*
-  [
-    {
-      videoId: '',
-      labels: []
-    }
-  ]
-  */
 
   // Search videos with youtube data api
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  function displayMessageSnackbar(message) {
+    setIsSnackbarOpen(true)
+    setSnackbarMessage(message)
+  }
+  function closeSnackbar() {
+    setIsSnackbarOpen(false)
+  }
   function searchVideos(query) {
-    if (!youtubeApiKey) return
+    if (!youtubeApiKey) {
+      displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the App Settings menu.')
+      return
+    }
 
     var opts = {
       key: youtubeApiKey,
@@ -77,18 +83,18 @@ export default function ProjectScreen({ youtubeApiKey }) {
     }
 
     youtubeSearch(query.text, opts, function (err, youtubeResults) {
-      if (err) throw err
+      if (!err) {
+        let searchCandidateVideos = youtubeResults.map(result => (
+          {
+            youtubeData: result,
+            downloadState: 'none',
+            downloadPercent: 0,
+            isSelected: false
+          }
+        ))
 
-      let searchCandidateVideos = youtubeResults.map(result => (
-        {
-          youtubeData: result,
-          downloadState: 'none',
-          downloadPercent: 0,
-          isSelected: false
-        }
-      ))
-
-      setCandidateVideos(searchCandidateVideos)
+        setCandidateVideos(searchCandidateVideos)
+      }
     })
   }
 
@@ -113,6 +119,8 @@ export default function ProjectScreen({ youtubeApiKey }) {
     )
   }
 
+  let ytReadableStream = useRef(null)
+  let ytWriteableStream = useRef(null)
   function downloadVideo(downloadVideoId) {
 
     const options = {
@@ -127,16 +135,18 @@ export default function ProjectScreen({ youtubeApiKey }) {
       'videos_full', downloadVideoId + '.mp4'
     )
 
-    const ytStream = ytdl(videoUrl, options)
+    ytReadableStream.current = ytdl(videoUrl, options)
 
-    ytStream.pipe(fs.createWriteStream(videoPath))
+    ytWriteableStream.current = fs.createWriteStream(videoPath)
 
-    ytStream.on('progress', (chunkLength, downloaded, total) => {
+    ytReadableStream.current.pipe(ytWriteableStream.current)
+
+    ytReadableStream.current.on('progress', (chunkLength, downloaded, total) => {
       const percent = downloaded / total
       onVideoDownloadProgress(downloadVideoId, percent)
     })
 
-    ytStream.on('end', () => {
+    ytReadableStream.current.on('end', () => {
       onVideoDownloaded(downloadVideoId)
     })
   }
@@ -155,20 +165,19 @@ export default function ProjectScreen({ youtubeApiKey }) {
 
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadState: 'downloaded', isSelected: false } :
+        { ...video, downloadState: 'downloaded', downloadPercent: 1, isSelected: false } :
         video
       ))
 
     setDownloadedVideosDb(previous =>
       [
         ...previous,
-        {
-          ...videoData,
-          downloadState: 'downloaded',
-          isSelected: false
-        }
+        { ...videoData, downloadState: 'downloaded', downloadPercent: 1, isSelected: false }
       ]
     )
+
+    // Add an empty assignedLabels object
+    setAssignedVideoLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false }])
   }
 
   let requestedVideoIds = candidateVideos
@@ -195,20 +204,38 @@ export default function ProjectScreen({ youtubeApiKey }) {
     )
   }
 
-  // Creates a labels object if it does not exist or appends the new label to existing 
-  function assignLabel(videoId, label) {
-    setAssignedVideoLabelsDb(previous => {
-      const videoAssignedLabels = previous.find(videoLabel => videoLabel.videoId === videoId)
+  function cancelDownloads() {
+    const downloadingVideo = candidateVideos.find(video => video.downloadState === 'downloading')
+    if (downloadingVideo) {
+      setCandidateVideos(previousVideos =>
+        previousVideos.map(video => ({ ...video, downloadState: 'none', downloadPercent: 0 }))
+      )
 
-      if (videoAssignedLabels === undefined) {
-        return [...previous, { videoId, labels: [label] }]
-      } else {
-        return previous.map(videoLabel => (videoLabel.videoId === videoId) ?
-          ({ videoId: videoLabel.videoId, labels: [label, ...videoLabel.labels] }) :
-          videoLabel
-        )
-      }
+      fs.unlinkSync(getVideoUrl(downloadingVideo.youtubeData.id))
+
+      ytWriteableStream.current.destroy()
+      ytReadableStream.current.destroy()
     }
+  }
+
+  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb('assignedLabels', [])
+  /*
+  [
+    {
+      videoId: '',
+      labels: [],
+      isDone: false
+    }
+  ]
+  */
+
+  // Creates a labels object if it does not exist or appends the new label
+  function assignLabel(videoId, label) {
+    setAssignedVideoLabelsDb(previous =>
+      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+        ({ ...videoLabel, labels: [label, ...videoLabel.labels], isDone: false }) :
+        videoLabel
+      )
     )
   }
 
@@ -219,10 +246,20 @@ export default function ProjectScreen({ youtubeApiKey }) {
         (
           {
             videoId: videoLabel.videoId,
-            labels: videoLabel.labels.filter(label => label.id !== labelId)
+            labels: videoLabel.labels.filter(label => label.id !== labelId),
+            isDone: false
           }
         )
         :
+        videoLabel
+      )
+    )
+  }
+
+  function onVideoLabelsDone(videoId) {
+    setAssignedVideoLabelsDb(previous =>
+      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+        ({ ...videoLabel, isDone: true }) :
         videoLabel
       )
     )
@@ -238,7 +275,10 @@ export default function ProjectScreen({ youtubeApiKey }) {
       }]
     }
     dialog.showSaveDialog(null, opts, (filename) => {
-      fs.writeFileSync(filename, JSON.stringify(assignedVideoLabelsDb))
+      if (filename) {
+        const finishedLabels = assignedVideoLabelsDb.filer(videoLabels => videoLabels.isDone)
+        fs.writeFileSync(filename, JSON.stringify(finishedLabels, null, 4))
+      }
     })
   }
 
@@ -252,9 +292,8 @@ export default function ProjectScreen({ youtubeApiKey }) {
   ), {})
 
   // Scene setup
-  const [currentScene, setCurrentScene] = useState(0)
-  const getScene = (scene) => {
-    switch (scene) {
+  const getWorkspace = (workspace) => {
+    switch (workspace) {
       case 0:
         return (
           <SearchWorkspace
@@ -264,6 +303,7 @@ export default function ProjectScreen({ youtubeApiKey }) {
             onInvertSelection={invertSelectionAllVideos}
             onSubmitSearch={searchVideos}
             onClickDownloadSelectedVideos={downloadSelectedVideos}
+            onClickCancelDownloads={cancelDownloads}
           />
         )
       case 1:
@@ -272,9 +312,10 @@ export default function ProjectScreen({ youtubeApiKey }) {
             downloadedVideosData={downloadedVideosDb}
             videoUrls={downloadedVideoUrls}
             assignedVideoLabels={assignedVideoLabelsDb}
-            projectLabels={projectConfigDb.labels}
+            projectLabels={projectConfig.labels}
             onAssignLabel={assignLabel}
             onDeleteAssignedLabel={deleteAssignedLabel}
+            onVideoLabelsDone={onVideoLabelsDone}
             onClickExportLabels={exportAssignedLabels}
           />
         )
@@ -283,10 +324,28 @@ export default function ProjectScreen({ youtubeApiKey }) {
 
   return (
     <div className="ProjectScreen">
-      <TopBar title={projectConfigDb.name} onChangeScene={setCurrentScene} />
       {
-        getScene(currentScene)
+        getWorkspace(workspace)
       }
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        open={isSnackbarOpen}
+        onClose={closeSnackbar}
+        message={snackbarMessage}
+        action={[
+          <IconButton
+            key="close"
+            aria-label="Close"
+            color="inherit"
+            onClick={closeSnackbar}
+          >
+            <CloseIcon />
+          </IconButton>,
+        ]}
+      />
     </div>
   )
 }

@@ -1,13 +1,13 @@
 'use strict'
 
 // Import parts of electron to use
-const { app, BrowserWindow, Menu, dialog } = require('electron')
+const { app, BrowserWindow, Menu } = require('electron')
 const path = require('path')
 const url = require('url')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow, setApiKeyWindow, newProjectWindow
+let mainWindow
 
 // Keep a reference for dev mode
 let dev = false
@@ -63,6 +63,32 @@ function createWindow() {
     if (dev) {
       mainWindow.webContents.openDevTools()
     }
+
+    // Create menu only for dev
+    let menu = null
+    if (dev) {
+      const template = [
+        {
+          label: 'Dev',
+          submenu: [
+            { role: 'reload' },
+            { role: 'forcereload' },
+            { role: 'toggledevtools' },
+            { type: 'separator' },
+            { role: 'resetzoom' },
+            { role: 'zoomin' },
+            { role: 'zoomout' },
+            { type: 'separator' },
+            { role: 'togglefullscreen' }
+          ]
+        }
+      ]
+
+      menu = Menu.buildFromTemplate(template)
+      //Menu.setApplicationMenu(menu)
+      mainWindow.setMenu(menu)
+    }
+    mainWindow.setMenu(menu)
   })
 
   // Emitted when the window is closed.
@@ -95,117 +121,3 @@ app.on('activate', () => {
     createWindow()
   }
 })
-
-// Create a window to input the youtube data api key
-function createSetApiKeyWindow() {
-
-  setApiKeyWindow = new BrowserWindow({
-    width: 300,
-    height: 200,
-    title: 'Set YouTube API Key',
-    parent: mainWindow,
-    modal: true
-  })
-
-  setApiKeyWindow.setMenu(null)
-
-  let indexPath = url.format({
-    protocol: 'file:',
-    pathname: path.join(__dirname, 'src', 'setYoutubeApiKey.html'),
-    slashes: true
-  })
-
-  setApiKeyWindow.loadURL(indexPath)
-}
-
-function createNewProjectWindow() {
-
-  newProjectWindow = new BrowserWindow({
-    width: 300,
-    height: 200,
-    title: 'New Project',
-    parent: mainWindow,
-    modal: true
-  })
-
-  newProjectWindow.setMenu(null)
-
-  let indexPath = url.format({
-    protocol: 'file:',
-    pathname: path.join(__dirname, 'src', 'newProject.html'),
-    slashes: true
-  })
-
-  newProjectWindow.loadURL(indexPath)
-
-  newProjectWindow.on('closed', () => {
-    mainWindow.reload()
-    newProjectWindow = null
-  })
-}
-
-// Create menu
-const template = [
-  {
-    label: 'Project',
-    submenu: [
-      {
-        label: 'New',
-        click() {
-          createNewProjectWindow()
-
-          if (dev) {
-            newProjectWindow.webContents.openDevTools()
-          }
-        }
-      },
-      {
-        label: 'Open',
-        click() {
-          const options = {
-            properties: ['openDirectory']
-          }
-          dialog.showOpenDialog(null, options, (directoryPaths) => {
-            app.setPath('userData', directoryPaths[0])
-            mainWindow.reload()
-          })
-        }
-      }
-    ]
-  },
-  {
-    label: 'App Settings',
-    submenu: [
-      {
-        label: 'Set Youtube Data API Key',
-        click() {
-          // Open Set Youtube Data API Key window
-          createSetApiKeyWindow()
-        }
-      }
-    ]
-  }
-]
-
-if (dev) {
-  template.push({
-    label: 'View',
-    submenu: [
-      { role: 'reload' },
-      { role: 'forcereload' },
-      { role: 'toggledevtools' },
-      { type: 'separator' },
-      { role: 'resetzoom' },
-      { role: 'zoomin' },
-      { role: 'zoomout' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' }
-    ]
-  })
-}
-
-const menu = Menu.buildFromTemplate(template)
-Menu.setApplicationMenu(menu)
-
-
-

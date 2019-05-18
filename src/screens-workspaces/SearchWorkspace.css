@@ -3,9 +3,16 @@
   justify-content: space-between;
 }
 
-.SearchWorkspace .candidate-videos-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-gap: 10px;
-  padding: 10px;
+.side-panel-divider {
+  padding: 2em 0;
+}
+
+.slider-container {
+  padding: 2em 1em;
+  height: 60px;
+}
+
+.search-results {
+  height: calc(100vh - 50px - 60px); /* -TopBar -slider-container */
+  overflow-y: scroll;
 }

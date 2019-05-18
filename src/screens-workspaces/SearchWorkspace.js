@@ -2,8 +2,11 @@ import './SearchWorkspace.css'
 
 import React, { useState } from 'react'
 
+import { Typography, TextField, MenuItem, Button, Divider, Grid, GridList, GridListTile } from '@material-ui/core'
+import Slider from '@material-ui/lab/Slider'
+
 import SidePanel from '../components/SidePanel'
-import CandidateVideoCard from '../components/CandidateVideoCard'
+import VideoCard from '../components/VideoCard'
 import Main from '../components/Main'
 
 // Search videos to get candidates and filter them
@@ -11,7 +14,8 @@ export default function SearchWorkspace({
   videos,
   onSelectAll, onInvertSelection, onCardClick,
   onSubmitSearch,
-  onClickDownloadSelectedVideos }) {
+  onClickDownloadSelectedVideos, onClickCancelDownloads
+}) {
 
   const [textInput, setTextInput] = useState('')
   const [maxResults, setMaxResults] = useState(10)
@@ -53,110 +57,139 @@ export default function SearchWorkspace({
   return (
     <div className="SearchWorkspace">
       <SidePanel>
-        <h2>Input</h2>
-        <h3>Search</h3>
+        <Typography variant="h5" component="h2"> Search </Typography>
         <form onSubmit={handleSubmit}>
+          <TextField
+            autoFocus
+            label="Search query"
+            value={textInput}
+            type="search"
+            onChange={e => setTextInput(e.target.value)}
+            margin="normal"
+            variant="outlined"
+            fullWidth
+          />
 
-          <p>
-            <label>
-              Search query
-            <input type="text" onChange={e => setTextInput(e.target.value)}></input>
-            </label>
-          </p>
+          <Grid container spacing={16}>
+            <Grid item>
 
-
-          <p>
-            <label>
-              Max results
-              <input
+              <TextField
+                label="Max results"
                 type="number"
                 min="0"
                 defaultValue="10"
-                onChange={e => setMaxResults(e.target.value)}></input>
-            </label>
-          </p>
+                onChange={e => setMaxResults(e.target.value)}
+                margin="normal"
+                variant="outlined"
+              />
+            </Grid>
 
+            <Grid item>
+              <TextField
+                select
+                label="Order by"
+                value={order}
+                onChange={e => setOrder(e.target.value)}
+                margin="normal"
+                variant="outlined"
+              >
+                <MenuItem value="date">Date</MenuItem>
+                <MenuItem value="rating">Rating</MenuItem>
+                <MenuItem value="relevance">Relevance</MenuItem>
+                <MenuItem value="title">Title</MenuItem>
+                <MenuItem value="viewCount">View Count</MenuItem>
+              </TextField>
+            </Grid>
 
-          <p>
-            <label>
-              Order
-            <select defaultValue="relevance" onChange={e => setOrder(e.target.value)}>
-                <option value='date'>Date</option>
-                <option value='rating'>Rating</option>
-                <option value='relevance'>Relevance</option>
-                <option value='title'>Title</option>
-                <option value='videoCount'>Video count</option>
-                <option value='viewCount'>View count</option>
-              </select>
-            </label>
-          </p>
+          </Grid>
 
+          <Grid container spacing={16}>
+            <Grid item>
+              <TextField
+                select
+                label="Video duration"
+                value={videoDuration}
+                onChange={e => setVideoDuration(e.target.value)}
+                margin="normal"
+                variant="outlined"
+              >
+                <MenuItem value="short">Short {'(< 4 min)'}</MenuItem>
+                <MenuItem value="medium">Medium {'(4 - 20 min)'}</MenuItem>
+                <MenuItem value="long">Long {'(> 20 min)'}</MenuItem>
+                <MenuItem value="any">Any duration</MenuItem>
+              </TextField>
+            </Grid>
 
-          <p>
-            <label>
-              Video duration
-            <select defaultValue="short" onChange={e => setVideoDuration(e.target.value)}>
-                <option value='short'>Short</option>
-                <option value='medium'>Medium</option>
-                <option value='long'>Long</option>
-                <option value='any'>Any</option>
-              </select>
-            </label>
-          </p>
+            <Grid item>
+              <TextField
+                select
+                label="Video license"
+                value={videoLicense}
+                onChange={(e) => setVideoLicense(e.target.value)}
+                margin="normal"
+                variant="outlined"
+              >
+                <MenuItem value="creativeCommon">Creative Commons license</MenuItem>
+                <MenuItem value="youtube">Youtube license</MenuItem>
+                <MenuItem value="any">Any license</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
 
-
-          <p>
-            <label>
-              Video license
-            <select defaultValue="any" onChange={e => setVideoLicense(e.target.value)}>
-                <option value='creativeCommon'>Creative Common</option>
-                <option value='youtube'>Youtube</option>
-                <option value='any'>Any</option>
-              </select>
-            </label>
-          </p>
-
-          <button type="submit">Search</button>
+          <Button variant="contained" color="primary" type="submit" fullWidth> Search </Button>
         </form>
 
-        <h3>Selection</h3>
+        <div className="side-panel-divider">
+          <Divider variant="fullWidth" />
+        </div>
 
-        <button onClick={onSelectAll}>Select All</button>
-        <button onClick={onInvertSelection}>Invert Selection</button>
+        <Typography variant="h5" component="h2" gutterBottom> Selection </Typography>
+        <Grid container spacing={16}>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={onSelectAll}> Select All </Button>
+          </Grid>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={onInvertSelection}> Invert Selection </Button>
+          </Grid>
+        </Grid>
+
       </SidePanel>
 
       <Main>
-        <select
-          defaultValue="2"
-          style={{ width: '100%', margin: 0 }}
-          onChange={e => setNumCols(e.target.value)}
-        >
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-
-        <div
-          className="candidate-videos-grid"
-          style={{ gridTemplateColumns: `repeat(${numCols}, 1fr)` }}
-        >
-
-          {videos.map(candidateVideo =>
-            <CandidateVideoCard
-              videoData={candidateVideo}
-              onClick={() => onCardClick(candidateVideo.youtubeData.id)}
-              key={candidateVideo.youtubeData.id}
-            />
-          )}
+        <div className="slider-container">
+          <Slider
+            value={numCols}
+            min={1} max={6} step={1}
+            onChange={(e, v) => setNumCols(v)}
+          />
+        </div>
+        <div className="search-results">
+          <GridList cellHeight={'auto'} cols={numCols}>
+            {videos.map(candidateVideo =>
+              <GridListTile key={candidateVideo.youtubeData.id}>
+                <VideoCard
+                  borderColor={candidateVideo.isSelected ? '#3f3' : '#333'}
+                  videoData={candidateVideo}
+                  onClick={() => onCardClick(candidateVideo.youtubeData.id)}
+                />
+              </GridListTile>
+            )}
+          </GridList>
         </div>
       </Main>
 
+
       <SidePanel>
-        <h2>Output</h2>
-        <h3>Download</h3>
-        <button onClick={onClickDownloadSelectedVideos}>Download Selected Videos</button>
+        <Typography variant="h5" component="h2" gutterBottom> Download </Typography>
+        <Grid container spacing={16}>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={onClickDownloadSelectedVideos} > Download Selected Videos </Button>
+          </Grid>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} > Cancel All Downloads </Button>
+          </Grid>
+        </Grid>
+
       </SidePanel>
     </div>
   )

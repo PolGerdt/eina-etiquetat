@@ -1,0 +1,33 @@
+.VideoCard {
+  background-color: #ddd;
+  width: 100%;
+  border: 0.7em solid #333;
+}
+
+.VideoCard img {
+  width: 100%;
+}
+
+.VideoCard .video-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.VideoCard .video-title {
+  font-size: 1em;
+  margin: 0.5em;
+}
+
+.VideoCard .download-video-info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.VideoCard .download-video-info p {
+  margin: 0.5em;
+}
+
+.VideoCard .download-video-info button {
+  padding: 0.5em 1em;
+}

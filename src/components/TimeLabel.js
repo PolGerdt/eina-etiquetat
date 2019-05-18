@@ -1,10 +1,18 @@
 import './TimeLabel.css'
 import React from 'react'
 
-export default function TimeLabel({ label, isOpen, onClickDelete }) {
+import { Button } from '@material-ui/core'
+import CloseIcon from '@material-ui/icons/Close'
+import pink from '@material-ui/core/colors/pink'
+import grey from '@material-ui/core/colors/grey'
+
+const openColor = pink[500]
+const greyColor = grey[300]
+
+export default function TimeLabel({ totalTime, label, isOpen, onClickDelete }) {
   // If out percent is smaller than in percent set start to the min value and width to absolute difference
-  const startPct = (Math.min(label.inPct, label.outPct) * 100) + '%'
-  const widthPct = (Math.abs(label.outPct - label.inPct) * 100) + '%'
+  const startPct = (100 * Math.min(label.inTime, label.outTime) / totalTime) + '%'
+  const widthPct = (100 * Math.abs(label.outTime - label.inTime) / totalTime) + '%'
 
   return (
     <div
@@ -12,12 +20,14 @@ export default function TimeLabel({ label, isOpen, onClickDelete }) {
       style={{
         left: startPct,
         width: widthPct,
-        borderTopColor: isOpen ? '#fdd' : '#ddd'
+        borderTopColor: isOpen ? openColor : greyColor
       }}
     >
       <div className="label-info">
-        <p>{label.name}</p>
-        <button onClick={onClickDelete}>X</button>
+        <p>{label.labelName}</p>
+        <Button variant="text" color="secondary" size="small" onClick={onClickDelete}>
+          <CloseIcon fontSize="small" />
+        </Button>
       </div>
     </div>
   )

@@ -1,11 +1,13 @@
 .StartScreen {
-
-}
-
-.StartScreen .mainContainer {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100vw;
   height: 100vh;
+}
+
+.card-icon-container {
+  display: flex;
+  justify-content: center;
+  padding: 1em 0;
 }

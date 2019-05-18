@@ -2,18 +2,30 @@ import './VideoScroller.css'
 
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function VideoScroller({ videoSrc, onTimeChange }) {
+import { Button } from '@material-ui/core'
+import Slider from '@material-ui/lab/Slider'
+import ChevronRightIcon from '@material-ui/icons/ChevronRight'
+import ChevronLeftIcon from '@material-ui/icons/ChevronLeft'
 
-  const [videoDuration, setVideoDuration] = useState(0.01)
+const framePeriod = 1 / 30
+
+export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDurationChange }) {
+
   const [videoTime, setVideoTime] = useState(0)
 
-  function onInputRange(e) {
-    const percent = e.target.value
-    const time = percent * videoDuration
+  function onInputRange(v) {
+    setVideoTime(v)
+    onVideoTimeChange(v)
+  }
 
-    setVideoTime(time)
+  const videoEl = useRef(null)
 
-    onTimeChange({ time, percent })
+  const [videoDuration, setVideoDuration] = useState(0.01)
+
+  function onDurationChange(e) {
+    const duration = e.target.duration
+    setVideoDuration(duration)
+    onVideoDurationChange(duration)
   }
 
   // When src is changed, load the video and set time to start
@@ -25,16 +37,17 @@ export default function VideoScroller({ videoSrc, onTimeChange }) {
   }, [videoSrc])
 
   // Set video time to current state
-  const videoEl = useRef(null)
   useEffect(() => {
     videoEl.current.currentTime = videoTime
   }, [videoTime])
 
-  // Set range time to current state
-  const inputEl = useRef(null)
-  useEffect(() => {
-    inputEl.current.value = videoTime / videoDuration
-  }, [videoTime, videoDuration])
+  function forwardStep() {
+    setVideoTime(current => Math.min(current + framePeriod, videoDuration))
+  }
+
+  function backwardStep() {
+    setVideoTime(current => Math.max(current - framePeriod, 0))
+  }
 
   return (
     <div className="VideoScroller">
@@ -42,18 +55,25 @@ export default function VideoScroller({ videoSrc, onTimeChange }) {
         ref={videoEl}
         src={videoSrc}
         preload="auto"
-        onDurationChange={(e) => setVideoDuration(e.target.duration)}
-        //onTimeUpdate={(e) => setVideoTime(e.target.currentTime)}
+        onDurationChange={onDurationChange}
       />
 
       <div className="video-controls">
-        <input
-          ref={inputEl}
-          className="video-range"
-          type="range"
-          min="0" max="1" step="0.001"
-          defaultValue="0"
-          onInput={onInputRange}
+        <div>
+          <Button variant="contained" color="default" onClick={backwardStep}>
+            <ChevronLeftIcon />
+          </Button>
+          <Button variant="contained" color="default" onClick={forwardStep}>
+            <ChevronRightIcon />
+          </Button>
+        </div>
+      </div>
+
+      <div className="video-slider">
+        <Slider
+          value={videoTime}
+          min={0} max={videoDuration} step={framePeriod}
+          onChange={(e, v) => onInputRange(v)}
         />
       </div>
     </div>

@@ -3,18 +3,24 @@ import './App.css'
 import React, { useState, useEffect } from 'react'
 
 import StartScreen from './StartScreen'
-import NewProjectDialog from '../components/NewProjectDialog'
 import ProjectScreen from './ProjectScreen'
+import EditProjectDialog from '../components/EditProjectDialog'
+import EditApiKeyDialog from '../components/EditApiKeyDialog'
 
+import TopBar from '../components/TopBar'
 
 const { app, dialog } = require('electron').remote
 const fs = require('fs')
 const path = require('path')
 const JsonDB = require('node-json-db')
 
+let projectDataDb = undefined
 let appConfigDb = new JsonDB(path.join(app.getPath('appData'), 'config-eina-etiquetat.json'), true, false)
-appConfigDb.push('/youtubeApiKey', '') // !! needs key
-let projectDataDb = null
+try {
+  const storedYoutubeApiKey = appConfigDb.getData('/youtubeApiKey')
+} catch (error) {
+  appConfigDb.push('/youtubeApiKey', '')
+}
 
 function useYoutubeApiKeyDb(defaultState) {
   const [youtubeApiKey, setYoutubeApiKey] = useState(appConfigDb.getData('/youtubeApiKey') || defaultState)
@@ -28,56 +34,126 @@ function useYoutubeApiKeyDb(defaultState) {
 
 export default function App() {
 
+  const [youtubeApiKeyDb, setYoutubeApiKeyDb] = useYoutubeApiKeyDb('')
+
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false)
+  function handleApiKeyDialogClose(result) {
+    if (result) {
+      setYoutubeApiKeyDb(result)
+      openProjectFromUserData()
+    }
+
+    setIsApiKeyDialogOpen(false)
+  }
+
   const [isProjectSetup, setIsProjectSetup] = useState(false)
 
-  const [isNewProjectDialog, setIsNewProjectDialog] = useState(false)
+  const [isEditProjectDialog, setIsEditProjectDialog] = useState(false)
 
-  function openNewProjectDialog() {
-    setIsNewProjectDialog(true)
+  const [projectConfig, setProjectConfig] = useState({ name: '', labels: [] })
+
+  function showEditProjectDialog() {
+    setIsEditProjectDialog(true)
+  }
+
+  function handleEditProjectDialogClose(result) {
+    if (result) {
+      if (result.isEdit) {
+        editProjectConfig(result.config)
+      } else {
+        createNewProject(result.config)
+      }
+    }
+
+    setIsEditProjectDialog(false)
+  }
+
+  function openProjectFromUserData() {
+    const projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+
+    const projectConfig = projectDataDb.getData('/config')
+
+    setProjectConfig(projectConfig)
+    setIsProjectSetup(true)
+  }
+
+  function editProjectConfig(projectConfig) {
+    app.setPath('userData', projectConfig.projectPath)
+
+    projectDataDb = new JsonDB(path.join(projectConfig.projectPath, 'projectData.json'), true, false)
+    projectDataDb.push('/config', { name: projectConfig.projectName, labels: projectConfig.projectLabels })
+    projectDataDb.push('/downloadedVideos', [])
+    projectDataDb.push('/assignedLabels', [])
+
+    openProjectFromUserData()
   }
 
   function createNewProject(projectConfig) {
     app.setPath('userData', projectConfig.projectPath)
 
     // Create project folders
-    fs.mkdirSync(path.join(app.getPath('userData'), 'videos_full'))
-    fs.mkdirSync(path.join(app.getPath('userData'), 'videos_segments'))
+    fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_full'))
+    fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_segments'))
 
     projectDataDb = new JsonDB(path.join(projectConfig.projectPath, 'projectData.json'), true, false)
     projectDataDb.push('/config', { name: projectConfig.projectName, labels: projectConfig.projectLabels })
     projectDataDb.push('/downloadedVideos', [])
-    projectDataDb.push('/lastLabelId', 0)
     projectDataDb.push('/assignedLabels', [])
 
-    setIsProjectSetup(true)
-    setIsNewProjectDialog(false)
+    openProjectFromUserData()
   }
 
-  function openProject() {
+  function showOpenProjectDialog() {
     const options = {
       properties: ['openDirectory']
     }
     dialog.showOpenDialog(null, options, (directoryPaths) => {
-      if (directoryPaths) app.setPath('userData', directoryPaths[0])
+      if (directoryPaths) {
+        app.setPath('userData', directoryPaths[0])
 
-      setIsProjectSetup(true)
+        openProjectFromUserData()
+      }
     })
   }
 
-  const [youtubeApiKey, setYoutubeApiKey] = useYoutubeApiKeyDb('')
+  const [currentWorkspace, setCurrentWorkspace] = useState(0)
+
+  function onClickMenuItem(item) {
+    switch (item) {
+      case 0:
+        showEditProjectDialog()
+        break
+      case 1:
+        showOpenProjectDialog()
+        break
+      case 2:
+        showEditProjectDialog()
+        break
+      case 3:
+        setIsApiKeyDialogOpen(true)
+        break
+    }
+  }
 
   return (
     <div className="App">
-      {
-        isNewProjectDialog ?
-          <NewProjectDialog onFinishEdit={createNewProject} /> :
-          null
-      }
+      <TopBar
+        title={projectConfig.name}
+        onChangeScene={setCurrentWorkspace}
+        disabledTabs={!isProjectSetup}
+        onClickMenuItem={onClickMenuItem}
+      />
+
+      <EditApiKeyDialog isOpen={isApiKeyDialogOpen} onClose={handleApiKeyDialogClose} />
+      <EditProjectDialog
+        isOpen={isEditProjectDialog} onClose={handleEditProjectDialogClose}
+        previousConfig={isProjectSetup ? { ...projectConfig, path: app.getPath('userData') } : null}
+      />
 
       {
         isProjectSetup ?
-          <ProjectScreen youtubeApiKey={youtubeApiKey} /> :
-          <StartScreen onClickNew={openNewProjectDialog} onClickOpen={openProject} />
+          <ProjectScreen youtubeApiKey={youtubeApiKeyDb} workspace={currentWorkspace} projectConfig={projectConfig} /> :
+          <StartScreen onClickNew={showEditProjectDialog} onClickOpen={showOpenProjectDialog} />
       }
     </div>
   )

@@ -1,10 +1,15 @@
 import './LabelWorkspace.css'
 
 import React, { useState } from 'react'
+
+import { Typography, Button, Chip } from '@material-ui/core'
+import LabelIcon from '@material-ui/icons/Label'
+import CheckIcon from '@material-ui/icons/Check'
+
 import SidePanel from '../components/SidePanel'
 import Main from '../components/Main'
 import VideoScroller from '../components/VideoScroller'
-import CandidateVideoCard from '../components/CandidateVideoCard'
+import VideoCard from '../components/VideoCard'
 import TimeLabel from '../components/TimeLabel'
 
 import JsonDB from 'node-json-db'
@@ -12,44 +17,58 @@ import JsonDB from 'node-json-db'
 const { app } = require('electron').remote
 const path = require('path')
 
-let projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+let projectDataDb = undefined
 
 export default function LabelWorkspace({
   downloadedVideosData, videoUrls,
   assignedVideoLabels,
   projectLabels,
   onAssignLabel, onDeleteAssignedLabel,
+  onVideoLabelsDone,
   onClickExportLabels
 }) {
 
-  const [currentVideoId, setCurrentVideoId] = useState(downloadedVideosData[0].youtubeData.id)
+  if (!projectDataDb)
+    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
 
-  const [videoTime, setVideoTime] = useState({ time: 0, percent: 0 })
+  const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone)
+
+  const [currentVideoId, setCurrentVideoId] = useState(nextVideoLabels ? nextVideoLabels.videoId : '')
 
   // Labels for current video
   const [openLabels, setOpenLabels] = useState([])
   /*
   [
-    {id, name, inPct, outPct}
+    {id, labelName, inTime, outTime}
   ]
   */
 
   const currentVideoAssignedLabelsInfo = assignedVideoLabels.find(videoLabels => videoLabels.videoId === currentVideoId)
   const currentVideoAssignedLabels = currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.labels : []
 
+  const [videoTime, setVideoTime] = useState(0)
+  function onVideoTimeChange(time) {
+    setVideoTime(time)
+  }
+
+  const [currentVideoDuration, setCurrentVideoDuration] = useState(0.01)
+  function onVideoDurationChange(videoDuration) {
+    setCurrentVideoDuration(videoDuration)
+  }
+
   function onLabelClick(name) {
     const openLabelIndex = openLabels
-      .findIndex(label => (label.name === name && label.outPct === undefined))
+      .findIndex(label => (label.labelName === name && label.outTime === undefined))
 
     const hasOpenLabel = openLabelIndex !== -1
     if (hasOpenLabel) {
       // Close label and send it to the App
       const openLabel = openLabels[openLabelIndex]
 
-      // If vidPercent is bigger than inPercent swap inPct with outPct
-      const closedLabel = (videoTime.percent > openLabel.inPct) ?
-        { ...openLabel, outPct: videoTime.percent } :
-        { ...openLabel, inPct: videoTime.percent, outPct: openLabel.inPct }
+      // If videoTime is bigger than inTime swap inTime with outTime
+      const closedLabel = (videoTime > openLabel.inTime) ?
+        { ...openLabel, outTime: videoTime } :
+        { ...openLabel, inTime: videoTime, outTime: openLabel.inTime }
 
       onAssignLabel(currentVideoId, closedLabel)
 
@@ -57,13 +76,12 @@ export default function LabelWorkspace({
     } else {
       // Create new label
       setOpenLabels(previous => {
-        const nextId = projectDataDb.getData('/lastLabelId')
-        projectDataDb.push('/lastLabelId', nextId + 1)
-
-        return [
-          { id: nextId, name, inPct: videoTime.percent, outPct: undefined },
+        const updatedLabels = [
+          { id: Date.now(), labelName: name, inTime: videoTime, outTime: undefined },
           ...previous
         ]
+
+        return updatedLabels
       })
 
     }
@@ -75,43 +93,57 @@ export default function LabelWorkspace({
   }
 
   function onLabelsFinish() {
-    console.log(assignedVideoLabels)
+    const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone && videoLabels.videoId !== currentVideoId)
+
+    if (nextVideoLabels !== undefined) {
+      setCurrentVideoId(nextVideoLabels.videoId)
+    }
+
+    onVideoLabelsDone(currentVideoId)
   }
 
-  const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.name === labelName) !== -1)
+  const isVideoDone = (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
+  const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.labelName === labelName) !== -1)
 
   return (
     <div className="LabelWorkspace">
       <SidePanel>
-        <h2>Downloaded videos</h2>
+        <Typography variant="h5" component="h2" gutterBottom> Downloaded videos </Typography>
 
-        {downloadedVideosData.map(loadedVideoData =>
-          <div
-            style={{ marginTop: '1em' }}
-            key={loadedVideoData.youtubeData.id}>
-            <CandidateVideoCard
-              videoData={loadedVideoData}
-              onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
-            />
-          </div>
-        )}
+        {
+          downloadedVideosData.map(loadedVideoData =>
+            <div
+              style={{ marginTop: '1em' }}
+              key={loadedVideoData.youtubeData.id}>
+              <VideoCard
+                borderColor={isVideoDone(loadedVideoData.youtubeData.id) ? '#33f' : '#333'}
+                videoData={loadedVideoData}
+                onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
+              />
+            </div>
+          )
+        }
       </SidePanel>
 
       <Main>
         <div className="main-label">
 
-          <VideoScroller videoSrc={videoUrls[currentVideoId]} onTimeChange={setVideoTime} />
+          <VideoScroller
+            videoSrc={videoUrls[currentVideoId]}
+            onVideoTimeChange={onVideoTimeChange}
+            onVideoDurationChange={onVideoDurationChange}
+          />
 
           <div className="choose-label-list">
             {
-              projectLabels.map((name, i) =>
-                <button key={i} onClick={() => onLabelClick(name)}>
-                  {
-                    isLabelOpen(name) ?
-                      `${name} ]` :
-                      `[ ${name}`
-                  }
-                </button>
+              projectLabels.map((labelName, i) =>
+                <Chip
+                  key={i}
+                  icon={isLabelOpen(labelName) ? <CheckIcon /> : <LabelIcon />}
+                  color={isLabelOpen(labelName) ? 'secondary' : 'default'}
+                  label={labelName}
+                  onClick={() => onLabelClick(labelName)}
+                />
               )
             }
           </div>
@@ -121,7 +153,8 @@ export default function LabelWorkspace({
             {
               openLabels.map((label, i) =>
                 <TimeLabel
-                  label={{ ...label, outPct: videoTime.percent }}
+                  totalTime={currentVideoDuration}
+                  label={{ ...label, outTime: videoTime }}
                   isOpen={true}
                   onClickDelete={() => deleteAssignedLabel(label.id)}
                   key={i}
@@ -131,6 +164,7 @@ export default function LabelWorkspace({
             {
               currentVideoAssignedLabels.map((label, i) =>
                 <TimeLabel
+                  totalTime={currentVideoDuration}
                   label={label}
                   isOpen={false}
                   onClickDelete={() => deleteAssignedLabel(label.id)}
@@ -140,22 +174,21 @@ export default function LabelWorkspace({
             }
           </div>
 
-          <button onClick={onLabelsFinish}>Finished</button>
+          <Button
+            variant="contained"
+            color="secondary"
+            disabled={currentVideoAssignedLabelsInfo.isDone}
+            onClick={onLabelsFinish}
+          >
+            Finished
+          </Button>
 
         </div>
       </Main>
 
       <SidePanel>
-        <h3>Project Labels</h3>
-        {
-          projectLabels.map((name) =>
-            <div key={name}>
-              <p>{name}</p>
-            </div>
-          )
-        }
-        <h3>Assigned Labels</h3>
-        <button onClick={onClickExportLabels}>Export Assigned Labels</button>
+        <Typography variant="h5" component="h2" gutterBottom> Assigned Labels </Typography>
+        <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export Assigned Labels </Button>
       </SidePanel>
     </div >
   )
