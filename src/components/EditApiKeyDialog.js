@@ -16,7 +16,7 @@ export default function EditApiKeyDialog({ isOpen, onClose }) {
         <DialogTitle>Set Youtube Api Key</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            To search for youtube videos yoyu need a Youtube Api Key.
+            To search for youtube videos you need a Youtube Api Key.
           </DialogContentText>
           <TextField
             autoFocus
@@ -36,6 +36,6 @@ export default function EditApiKeyDialog({ isOpen, onClose }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </div >
   )
 }

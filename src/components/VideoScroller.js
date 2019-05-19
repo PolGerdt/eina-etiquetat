@@ -1,11 +1,13 @@
 import './VideoScroller.css'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Button } from '@material-ui/core'
 import Slider from '@material-ui/lab/Slider'
 import ChevronRightIcon from '@material-ui/icons/ChevronRight'
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft'
+
+const Mousetrap = require('mousetrap');
 
 const framePeriod = 1 / 30
 
@@ -13,9 +15,13 @@ export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDura
 
   const [videoTime, setVideoTime] = useState(0)
 
+  // If time is changed send onVideoTimeChange event up
+  useEffect(() => {
+    onVideoTimeChange(videoTime)
+  }, [videoTime, onVideoTimeChange])
+
   function onInputRange(v) {
     setVideoTime(v)
-    onVideoTimeChange(v)
   }
 
   const videoEl = useRef(null)
@@ -41,13 +47,35 @@ export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDura
     videoEl.current.currentTime = videoTime
   }, [videoTime])
 
-  function forwardStep() {
-    setVideoTime(current => Math.min(current + framePeriod, videoDuration))
-  }
+  // Steps are aproximately frames
+  const backwardSteps = useCallback(
+    (num = 1) => {
+      setVideoTime(current => Math.max(current - num * framePeriod, 0))
+    },
+    [],
+  )
 
-  function backwardStep() {
-    setVideoTime(current => Math.max(current - framePeriod, 0))
-  }
+  const forwardSteps = useCallback(
+    (num = 1) => {
+      setVideoTime(current => Math.min(current + num * framePeriod, videoDuration))
+    },
+    [videoDuration],
+  )
+
+  // Shortcuts
+  useEffect(() => {
+    Mousetrap.bind('left', () => backwardSteps(1), 'keydown')
+    Mousetrap.bind('right', () => forwardSteps(1), 'keydown')
+    Mousetrap.bind(['ctrl+left', 'command+left'], () => backwardSteps(30), 'keydown')
+    Mousetrap.bind(['ctrl+right', 'command+right'], () => forwardSteps(30), 'keydown')
+
+    return () => {
+      Mousetrap.unbind('left')
+      Mousetrap.unbind('right')
+      Mousetrap.unbind(['ctrl+left', 'command+left'])
+      Mousetrap.unbind(['ctrl+right', 'command+right'])
+    }
+  }, [backwardSteps, forwardSteps])
 
   return (
     <div className="VideoScroller">
@@ -60,10 +88,10 @@ export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDura
 
       <div className="video-controls">
         <div>
-          <Button variant="contained" color="default" onClick={backwardStep}>
+          <Button variant="contained" color="default" onClick={() => backwardSteps(1)}>
             <ChevronLeftIcon />
           </Button>
-          <Button variant="contained" color="default" onClick={forwardStep}>
+          <Button variant="contained" color="default" onClick={() => forwardSteps(1)}>
             <ChevronRightIcon />
           </Button>
         </div>

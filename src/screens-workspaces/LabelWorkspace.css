@@ -7,16 +7,26 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 2em;
 }
-
-.main-label {}
 
 .main-label .choose-label-list {
   padding: 1em 0;
 }
 
 .main-label .labels-list {
-  padding: 1em 0;
+  padding: 1em 2em;
   position: relative;
+}
+
+.fixed-top {
+  padding: 2em;
+  height: 65vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+.scroll-bottom {
+  overflow-y: scroll;
+  padding-bottom: 2em;
+  height: calc(35vh - 110px);
 }

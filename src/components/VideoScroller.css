@@ -1,11 +1,3 @@
-.VideoScroller {}
-
-.VideoScroller .video-range {}
-
-.VideoScroller video {
-  width: 100%;
-}
-
 .VideoScroller video {
   width: 100%;
 }
@@ -18,7 +10,7 @@
   display: flex;
   flex-direction: row;
   justify-content: center;
-  padding: 1em 0;
+  padding: 0.5em 0;
 }
 
 .VideoScroller .video-slider {

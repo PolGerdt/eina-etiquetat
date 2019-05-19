@@ -6,6 +6,7 @@ import StartScreen from './StartScreen'
 import ProjectScreen from './ProjectScreen'
 import EditProjectDialog from '../components/EditProjectDialog'
 import EditApiKeyDialog from '../components/EditApiKeyDialog'
+import ShortcutsDialog from '../components/ShortcutsDialog'
 
 import TopBar from '../components/TopBar'
 
@@ -118,6 +119,8 @@ export default function App() {
 
   const [currentWorkspace, setCurrentWorkspace] = useState(0)
 
+  const [isOpenShortcutsDialog, setIsOpenShortcutsDialog] = useState(false)
+
   function onClickMenuItem(item) {
     switch (item) {
       case 0:
@@ -131,6 +134,9 @@ export default function App() {
         break
       case 3:
         setIsApiKeyDialogOpen(true)
+        break
+      case 4:
+        setIsOpenShortcutsDialog(true)
         break
     }
   }
@@ -149,6 +155,7 @@ export default function App() {
         isOpen={isEditProjectDialog} onClose={handleEditProjectDialogClose}
         previousConfig={isProjectSetup ? { ...projectConfig, path: app.getPath('userData') } : null}
       />
+      <ShortcutsDialog isOpen={isOpenShortcutsDialog} onClose={() => setIsOpenShortcutsDialog(false)} />
 
       {
         isProjectSetup ?

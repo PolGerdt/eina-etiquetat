@@ -276,8 +276,12 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     }
     dialog.showSaveDialog(null, opts, (filename) => {
       if (filename) {
-        const finishedLabels = assignedVideoLabelsDb.filer(videoLabels => videoLabels.isDone)
-        fs.writeFileSync(filename, JSON.stringify(finishedLabels, null, 4))
+        // Export only done video labels removing the isDone key
+        const finishedLabels = assignedVideoLabelsDb
+          .filter(videoLabels => videoLabels.isDone)
+          .map(videoLabels => ({ videoId: videoLabels.videoId, labels: videoLabels.labels }))
+
+        fs.writeFileSync(filename, JSON.stringify(finishedLabels, null, 2))
       }
     })
   }

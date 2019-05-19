@@ -1,6 +1,6 @@
 import './SearchWorkspace.css'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { Typography, TextField, MenuItem, Button, Divider, Grid, GridList, GridListTile } from '@material-ui/core'
 import Slider from '@material-ui/lab/Slider'
@@ -8,6 +8,8 @@ import Slider from '@material-ui/lab/Slider'
 import SidePanel from '../components/SidePanel'
 import VideoCard from '../components/VideoCard'
 import Main from '../components/Main'
+
+const Mousetrap = require('mousetrap')
 
 // Search videos to get candidates and filter them
 export default function SearchWorkspace({
@@ -53,6 +55,17 @@ export default function SearchWorkspace({
   }
 
   const [numCols, setNumCols] = useState(2)
+
+  // Shortcuts
+  useEffect(() => {
+    Mousetrap.bind(['command+e', 'ctrl+e'], onSelectAll)
+    Mousetrap.bind(['command+i', 'ctrl+i'], onInvertSelection)
+
+    return () => {
+      Mousetrap.unbind(['command+e', 'ctrl+e'])
+      Mousetrap.bind(['command+i', 'ctrl+i'])
+    }
+  }, [onSelectAll, onInvertSelection])
 
   return (
     <div className="SearchWorkspace">

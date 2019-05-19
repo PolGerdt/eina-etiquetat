@@ -2,6 +2,6 @@
   padding: 1em 1em;
   background-color: #aaa;
   width: 25%;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 64px);
   overflow-y: auto;
 }

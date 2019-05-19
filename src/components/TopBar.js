@@ -41,7 +41,8 @@ export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenu
             <MenuItem onClick={(e) => handleClickMenuItem(e, 1)}>Open Project</MenuItem>
             <MenuItem onClick={(e) => handleClickMenuItem(e, 2)}>Edit Project Settings</MenuItem>
             <Divider />
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 3)}>App Settings</MenuItem>
+            <MenuItem onClick={(e) => handleClickMenuItem(e, 3)}>Set Youtube Api Key</MenuItem>
+            <MenuItem onClick={(e) => handleClickMenuItem(e, 4)}>Shortcuts</MenuItem>
           </Menu>
 
           <Typography variant="h6" color="inherit">
