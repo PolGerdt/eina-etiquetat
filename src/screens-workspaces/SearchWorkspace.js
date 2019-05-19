@@ -13,7 +13,7 @@ const Mousetrap = require('mousetrap')
 
 // Search videos to get candidates and filter them
 export default function SearchWorkspace({
-  videos,
+  videos, requestedVideos,
   onSelectAll, onInvertSelection, onCardClick,
   onSubmitSearch,
   onClickDownloadSelectedVideos, onClickCancelDownloads
@@ -202,6 +202,25 @@ export default function SearchWorkspace({
             <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} > Cancel All Downloads </Button>
           </Grid>
         </Grid>
+
+        <div className="side-panel-divider">
+          <Divider variant="fullWidth" />
+        </div>
+
+        <Typography variant="h5" component="h2" gutterBottom> Requested videos </Typography>
+        {
+          requestedVideos.map(video =>
+            <div
+              style={{ marginTop: '1em' }}
+              key={video.youtubeData.id}>
+              <VideoCard
+                borderColor={video.isSelected ? '#3f3' : '#333'}
+                videoData={video}
+                onClick={() => { }}
+              />
+            </div>
+          )
+        }
 
       </SidePanel>
     </div>

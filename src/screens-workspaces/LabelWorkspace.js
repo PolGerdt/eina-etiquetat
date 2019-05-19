@@ -1,6 +1,6 @@
 import './LabelWorkspace.css'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 import { Typography, Button, Chip } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
@@ -31,7 +31,7 @@ export default function LabelWorkspace({
 }) {
 
   if (!projectDataDb)
-    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, true)
 
   const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone)
 

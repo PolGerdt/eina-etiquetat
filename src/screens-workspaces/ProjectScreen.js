@@ -33,19 +33,22 @@ function useProjectDataFieldDb(field, defaultState) {
 export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig }) {
 
   if (!projectDataDb)
-    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, true)
 
   const [candidateVideos, setCandidateVideos] = useState([])
   /*
-    candidateVideo = {
+  [
+    {
       youtubeData: {},
       downloadState: 'none' / 'requested' / 'downloading' / 'downloaded'
       downloadPercent: 0,
       isSelected: false
     }
+  ]
   */
 
   const [downloadedVideosDb, setDownloadedVideosDb] = useProjectDataFieldDb('downloadedVideos', [])
+  const [requestedVideos, setRequestedVideos] = useState([])
   /*
   [
     {
@@ -55,7 +58,6 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
       isSelected: false
     }
   ]
-  
   */
 
   // Search videos with youtube data api
@@ -123,6 +125,16 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   let ytWriteableStream = useRef(null)
   function downloadVideo(downloadVideoId) {
 
+    // Set state before starting the download to prevent multiple downloads
+    setCandidateVideos(previousVideos => previousVideos.map(video => (video.youtubeData.id === downloadVideoId) ?
+      { ...video, downloadState: 'downloading' } :
+      video
+    ))
+    setRequestedVideos(previous => previous.map(video => (video.youtubeData.id === downloadVideoId) ?
+      { ...video, downloadState: 'downloading' } :
+      video
+    ))
+
     const options = {
       quality: 'lowestvideo',
       filter: (format) => format.container === 'mp4'
@@ -152,22 +164,33 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   }
 
   function onVideoDownloadProgress(videoId, percentage) {
-    setCandidateVideos(previousVideos =>
-      previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
-        video
-      )
-    )
+    setCandidateVideos(previousVideos => previousVideos.map(video => (video.youtubeData.id === videoId) ?
+      { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
+      video
+    ))
+
+    setRequestedVideos(previous => previous.map(video => (video.youtubeData.id === videoId) ?
+      { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
+      video
+    ))
   }
 
   function onVideoDownloaded(videoId) {
-    let videoData = candidateVideos.find(video => video.youtubeData.id === videoId)
+    const videoData = candidateVideos.find(video => video.youtubeData.id === videoId)
 
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
         { ...video, downloadState: 'downloaded', downloadPercent: 1, isSelected: false } :
         video
-      ))
+      )
+    )
+
+    setRequestedVideos(previous =>
+      previous.map(video => (video.youtubeData.id === videoId) ?
+        { ...video, downloadState: 'downloaded', downloadPercent: 1, isSelected: false } :
+        video
+      )
+    )
 
     setDownloadedVideosDb(previous =>
       [
@@ -180,27 +203,32 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     setAssignedVideoLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false }])
   }
 
-  let requestedVideoIds = candidateVideos
-    .filter(video => video.downloadState === 'requested')
-    .map(videoToDownload => videoToDownload.youtubeData.id)
+  const nextRequestedVideo = requestedVideos.find(video => video.downloadState === 'requested')
 
-  let downloadingVideos = candidateVideos
-    .filter(video => video.downloadState === 'downloading')
+  const downloadingVideo = requestedVideos.find(video => video.downloadState === 'downloading')
 
-  let notDownloading = downloadingVideos.length === 0
-  let hasRequestedVideos = requestedVideoIds.length > 0
-
-  if (notDownloading && hasRequestedVideos) {
-    downloadVideo(requestedVideoIds[0])
+  if (downloadingVideo === undefined && nextRequestedVideo) {
+    downloadVideo(nextRequestedVideo.youtubeData.id)
   }
 
   // Set all selected videos to requested download state
   function downloadSelectedVideos() {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.isSelected) ?
-        { ...video, downloadState: 'requested' } :
+        { ...video, downloadState: 'requested', isSelected: false } :
         video
       )
+    )
+
+    const selectedVideos = candidateVideos
+      .filter(video => video.isSelected)
+      .map(video => ({ ...video, downloadState: 'requested', isSelected: false }))
+
+    setRequestedVideos(previous =>
+      [
+        ...previous,
+        ...selectedVideos
+      ]
     )
   }
 
@@ -209,6 +237,10 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     if (downloadingVideo) {
       setCandidateVideos(previousVideos =>
         previousVideos.map(video => ({ ...video, downloadState: 'none', downloadPercent: 0 }))
+      )
+
+      setRequestedVideos(previous =>
+        previous.map(video => ({ ...video, downloadState: 'none', downloadPercent: 0 }))
       )
 
       fs.unlinkSync(getVideoUrl(downloadingVideo.youtubeData.id))
@@ -302,6 +334,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
         return (
           <SearchWorkspace
             videos={candidateVideos}
+            requestedVideos={requestedVideos}
             onCardClick={toggleVideoSelection}
             onSelectAll={selectAllVideos}
             onInvertSelection={invertSelectionAllVideos}
