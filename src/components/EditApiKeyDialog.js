@@ -6,17 +6,23 @@ import {
   Dialog, DialogTitle, DialogActions, DialogContent, DialogContentText, TextField, Button
 } from '@material-ui/core'
 
-export default function EditApiKeyDialog({ isOpen, onClose }) {
+const { app } = require('electron').remote
+const path = require('path')
 
-  const [tempApiKey, setTempApiKey] = useState('')
+export default function EditApiKeyDialog({ isOpen, onClose, previousKey }) {
+
+  const [tempApiKey, setTempApiKey] = useState(previousKey || '')
 
   return (
     <div className="EditApiKeyDialog">
       <Dialog open={isOpen}>
-        <DialogTitle>Set Youtube Api Key</DialogTitle>
+        <DialogTitle>Edit Youtube Api Key</DialogTitle>
         <DialogContent>
           <DialogContentText>
             To search for youtube videos you need a Youtube Api Key.
+          </DialogContentText>
+          <DialogContentText color="error">
+            ! Warning ! Keep in mind that it will be stored unencripted at: {path.join(app.getPath('appData'), 'config-eina-etiquetat.json')}
           </DialogContentText>
           <TextField
             autoFocus
@@ -24,6 +30,7 @@ export default function EditApiKeyDialog({ isOpen, onClose }) {
             label="Youtube Api key"
             type="text"
             fullWidth
+            value={tempApiKey}
             onChange={(e) => setTempApiKey(e.target.value)}
           />
         </DialogContent>

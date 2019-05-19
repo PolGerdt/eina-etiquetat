@@ -18,7 +18,7 @@ const JsonDB = require('node-json-db')
 let projectDataDb = undefined
 let appConfigDb = new JsonDB(path.join(app.getPath('appData'), 'config-eina-etiquetat.json'), true, false)
 try {
-  const storedYoutubeApiKey = appConfigDb.getData('/youtubeApiKey')
+  appConfigDb.getData('/youtubeApiKey')
 } catch (error) {
   appConfigDb.push('/youtubeApiKey', '')
 }
@@ -150,7 +150,11 @@ export default function App() {
         onClickMenuItem={onClickMenuItem}
       />
 
-      <EditApiKeyDialog isOpen={isApiKeyDialogOpen} onClose={handleApiKeyDialogClose} />
+      <EditApiKeyDialog
+        isOpen={isApiKeyDialogOpen}
+        onClose={handleApiKeyDialogClose}
+        previousKey={youtubeApiKeyDb}
+      />
       <EditProjectDialog
         isOpen={isEditProjectDialog} onClose={handleEditProjectDialogClose}
         previousConfig={isProjectSetup ? { ...projectConfig, path: app.getPath('userData') } : null}
