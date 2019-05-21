@@ -11,7 +11,7 @@ import AddCircleIcon from '@material-ui/icons/AddCircle'
 
 const { dialog } = require('electron').remote
 
-export default function EditProjectDialog({ isOpen, onClose, previousConfig }) {
+export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
 
   const [projectPath, setProjectPath] = useState('')
   function onClickFolder() {
@@ -44,7 +44,7 @@ export default function EditProjectDialog({ isOpen, onClose, previousConfig }) {
 
   function onClickSave() {
     if (projectPath) {
-      onClose({ isEdit: Boolean(previousConfig), config: { projectName, projectPath, projectLabels } })
+      onClose({ projectName, projectPath, projectLabels })
     }
   }
 
@@ -53,12 +53,16 @@ export default function EditProjectDialog({ isOpen, onClose, previousConfig }) {
   }
 
   useEffect(() => {
-    if (previousConfig) {
-      setProjectName(previousConfig.name)
-      setProjectPath(previousConfig.path)
-      setProjectLabels(previousConfig.labels)
+    if (previousInfo) {
+      setProjectName(previousInfo.projectConfig.name)
+      setProjectLabels(previousInfo.projectConfig.labels)
+      setProjectPath(previousInfo.path)
+    } else {
+      setProjectName('')
+      setProjectPath('')
+      setProjectLabels([])
     }
-  }, [previousConfig])
+  }, [previousInfo])
 
   return (
     <div className="EditProjectDialog">

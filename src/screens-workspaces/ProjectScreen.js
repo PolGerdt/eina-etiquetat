@@ -1,6 +1,6 @@
 import './ProjectScreen.css'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Snackbar, IconButton } from '@material-ui/core'
 import CloseIcon from '@material-ui/icons/Close'
@@ -11,44 +11,43 @@ import LabelWorkspace from './LabelWorkspace'
 import youtubeSearch from 'youtube-search'
 import JsonDB from 'node-json-db'
 
-const { app, dialog } = require('electron').remote
+const { dialog } = require('electron').remote
 const path = require('path')
 const fs = require('fs')
 
 const ytdl = require('ytdl-core')
 
-let projectDataDb = undefined
+var ffmpeg = require('ffmpeg')
 
-function useProjectDataFieldDb(field, defaultState) {
+let projectDataDb = null
 
-  const [fieldData, setFieldData] = useState(projectDataDb.getData('/' + field) || defaultState)
+function useProjectDataFieldDb(projectPath, field, defaultState) {
+
+  const [fieldData, setFieldData] = useState(projectDataDb ? projectDataDb.getData('/' + field) : defaultState)
 
   useEffect(() => {
-    projectDataDb.push('/' + field, fieldData)
+    if (projectPath) {
+      projectDataDb = new JsonDB(path.join(projectPath, 'projectData.json'), true, true)
+      projectDataDb.reload()
+
+      setFieldData(projectDataDb.getData('/' + field))
+    }
+  }, [projectPath, field])
+
+  useEffect(() => {
+    if (projectDataDb) {
+      projectDataDb.push('/' + field, fieldData)
+    }
   }, [field, fieldData])
 
   return [fieldData, setFieldData]
 }
 
-export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig }) {
-
-  if (!projectDataDb)
-    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, true)
+export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig, projectPath }) {
 
   const [candidateVideos, setCandidateVideos] = useState([])
-  /*
-  [
-    {
-      youtubeData: {},
-      downloadState: 'none' / 'requested' / 'downloading' / 'downloaded'
-      downloadPercent: 0,
-      isSelected: false
-    }
-  ]
-  */
-
-  const [downloadedVideosDb, setDownloadedVideosDb] = useProjectDataFieldDb('downloadedVideos', [])
   const [requestedVideos, setRequestedVideos] = useState([])
+  const [downloadedVideosDb, setDownloadedVideosDb] = useProjectDataFieldDb(projectPath, 'downloadedVideos', [])
   /*
   [
     {
@@ -60,7 +59,13 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   ]
   */
 
-  // Search videos with youtube data api
+  // If path is changed reset candidate and requested videos
+  useEffect(() => {
+    setCandidateVideos([])
+    setRequestedVideos([])
+  }, [projectPath])
+
+  // Search videos with the youtube data api
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   function displayMessageSnackbar(message) {
@@ -72,7 +77,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   }
   function searchVideos(query) {
     if (!youtubeApiKey) {
-      displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the App Settings menu.')
+      displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
       return
     }
 
@@ -143,7 +148,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     const videoUrl = `http://www.youtube.com/watch?v=${downloadVideoId}`
 
     const videoPath = path.join(
-      app.getPath('userData'),
+      projectPath,
       'videos_full', downloadVideoId + '.mp4'
     )
 
@@ -176,7 +181,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   }
 
   function onVideoDownloaded(videoId) {
-    const videoData = candidateVideos.find(video => video.youtubeData.id === videoId)
+    const videoData = requestedVideos.find(video => video.youtubeData.id === videoId)
 
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
@@ -200,7 +205,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     )
 
     // Add an empty assignedLabels object
-    setAssignedVideoLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false }])
+    setAssignedVideoLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false, isVideoSegmented: false }])
   }
 
   const nextRequestedVideo = requestedVideos.find(video => video.downloadState === 'requested')
@@ -224,12 +229,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
       .filter(video => video.isSelected)
       .map(video => ({ ...video, downloadState: 'requested', isSelected: false }))
 
-    setRequestedVideos(previous =>
-      [
-        ...previous,
-        ...selectedVideos
-      ]
-    )
+    setRequestedVideos(previous => [...selectedVideos, ...previous])
   }
 
   function cancelDownloads() {
@@ -250,7 +250,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     }
   }
 
-  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb('assignedLabels', [])
+  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb(projectPath, 'assignedLabels', [])
   /*
   [
     {
@@ -277,7 +277,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
       previous.map(videoLabel => (videoLabel.videoId === videoId) ?
         (
           {
-            videoId: videoLabel.videoId,
+            ...videoLabel,
             labels: videoLabel.labels.filter(label => label.id !== labelId),
             isDone: false
           }
@@ -300,7 +300,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
   function exportAssignedLabels() {
     const opts = {
       title: 'Export labels',
-      defaultPath: app.getPath('userData'),
+      defaultPath: projectPath,
       filters: [{
         name: 'JSON',
         extensions: ['json']
@@ -318,14 +318,88 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
     })
   }
 
-  function getVideoUrl(videoId) {
-    const videoPath = path.join(app.getPath('userData'), 'videos_full', videoId + '.mp4')
+  const getVideoUrl = useCallback(
+    (videoId) => {
+      const videoPath = path.join(projectPath, 'videos_full', videoId + '.mp4')
+      return videoPath
+    }
+    , [projectPath]
+  )
+
+  /*function getVideoUrl(videoId) {
+    const videoPath = path.join(projectPath, 'videos_full', videoId + '.mp4')
     return videoPath
-  }
+  }*/
 
   const downloadedVideoUrls = downloadedVideosDb.reduce((urlsObj, videoData) => (
     { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }
   ), {})
+
+  const [isTrimming, setIsTrimming] = useState(false)
+  useEffect(() => {
+    function trimVideoSegment(assignedLabels) {
+
+      const videoSegmentsPath = path.join(projectPath, 'videos_segments', assignedLabels.videoId)
+
+      if (!fs.existsSync(videoSegmentsPath))
+        fs.mkdirSync(videoSegmentsPath)
+
+      const process = new ffmpeg(getVideoUrl(assignedLabels.videoId))
+
+      // "-ss", "00:00:38", "-i", "vid0.mp4", "-to", "00:00:04", "-c", "copy", "vid0_3842.mp4"
+
+      process.then(function (video) {
+
+        let segmentsCreated = 0
+
+        assignedLabels.labels.forEach((label) => {
+          const segmentName = `${assignedLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}.mp4`
+
+          video
+            .setVideoStartTime('00:00:' + label.inTime.toFixed(3))
+            .setVideoDuration('00:00:' + (label.outTime - label.inTime).toFixed(3))
+            .save(path.join(videoSegmentsPath, segmentName), function (error, file) {
+              if (!error) {
+                console.log('Video file: ' + file);
+
+                segmentsCreated++
+
+                if (segmentsCreated === assignedLabels.labels.length) {
+                  setAssignedVideoLabelsDb(previous =>
+                    previous.map(videoLabels => (videoLabels.videoId === assignedLabels.videoId) ?
+                      { ...videoLabels, isVideoSegmented: true } :
+                      videoLabels
+                    )
+                  )
+                }
+              } else {
+                console.log(error)
+              }
+            })
+        })
+
+      }, function (err) {
+        console.log('Error: ' + err)
+      })
+    }
+
+    if (isTrimming) {
+      const nextVideoLabels = assignedVideoLabelsDb.find(labels => labels.isDone && !labels.isVideoSegmented)
+      if (nextVideoLabels) {
+        displayMessageSnackbar('Creating segments...')
+        trimVideoSegment(nextVideoLabels)
+      } else {
+        displayMessageSnackbar('Segments saved to your project folder.')
+        setIsTrimming(false)
+      }
+    }
+  }, [assignedVideoLabelsDb, setAssignedVideoLabelsDb, isTrimming, projectPath, getVideoUrl])
+
+  // Trim videos with done assigned labels
+  function onClickTrimSegments() {
+    setIsTrimming(true)
+  }
+
 
   // Scene setup
   const getWorkspace = (workspace) => {
@@ -354,6 +428,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig 
             onDeleteAssignedLabel={deleteAssignedLabel}
             onVideoLabelsDone={onVideoLabelsDone}
             onClickExportLabels={exportAssignedLabels}
+            onClickTrimSegments={onClickTrimSegments}
           />
         )
     }

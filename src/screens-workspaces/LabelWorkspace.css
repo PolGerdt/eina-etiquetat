@@ -30,3 +30,7 @@
   padding-bottom: 2em;
   height: calc(35vh - 110px);
 }
+
+.side-panel-divider {
+  padding: 2em 0;
+}

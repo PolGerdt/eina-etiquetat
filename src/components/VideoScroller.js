@@ -36,10 +36,11 @@ export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDura
 
   // When src is changed, load the video and set time to start
   useEffect(() => {
-    videoEl.current.src = videoSrc
-    videoEl.current.load()
-
-    setVideoTime(0)
+    if (videoSrc) {
+      videoEl.current.src = videoSrc
+      videoEl.current.load()
+      setVideoTime(0)
+    }
   }, [videoSrc])
 
   // Set video time to current state

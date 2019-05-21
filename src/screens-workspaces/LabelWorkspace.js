@@ -2,7 +2,7 @@ import './LabelWorkspace.css'
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-import { Typography, Button, Chip } from '@material-ui/core'
+import { Typography, Button, Chip, Divider } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
 
@@ -12,13 +12,6 @@ import VideoScroller from '../components/VideoScroller'
 import VideoCard from '../components/VideoCard'
 import TimeLabel from '../components/TimeLabel'
 
-import JsonDB from 'node-json-db'
-
-const { app } = require('electron').remote
-const path = require('path')
-
-let projectDataDb = undefined
-
 const Mousetrap = require('mousetrap')
 
 export default function LabelWorkspace({
@@ -27,11 +20,8 @@ export default function LabelWorkspace({
   projectLabels,
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
-  onClickExportLabels
+  onClickExportLabels, onClickTrimSegments
 }) {
-
-  if (!projectDataDb)
-    projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, true)
 
   const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone)
 
@@ -206,7 +196,7 @@ export default function LabelWorkspace({
           <Button
             variant="contained"
             color="secondary"
-            disabled={currentVideoAssignedLabelsInfo.isDone}
+            disabled={currentVideoAssignedLabelsInfo? currentVideoAssignedLabelsInfo.isDone : false}
             onClick={onLabelsFinish}
             fullWidth
           >
@@ -220,6 +210,13 @@ export default function LabelWorkspace({
       <SidePanel>
         <Typography variant="h5" component="h2" gutterBottom> Assigned Labels </Typography>
         <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export Assigned Labels </Button>
+
+        <div className="side-panel-divider">
+          <Divider variant="fullWidth" />
+        </div>
+
+        <Typography variant="h5" component="h2" gutterBottom> Create segments </Typography>
+        <Button variant="contained" color="secondary" onClick={onClickTrimSegments} > Trim videos with finished labels </Button>
       </SidePanel>
     </div >
   )

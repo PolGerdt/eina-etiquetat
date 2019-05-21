@@ -47,51 +47,56 @@ export default function App() {
     setIsApiKeyDialogOpen(false)
   }
 
-  const [isProjectSetup, setIsProjectSetup] = useState(false)
-
-  const [isEditProjectDialog, setIsEditProjectDialog] = useState(false)
-
+  const [isProjectOpen, setIsProjectOpen] = useState(false)
   const [projectConfig, setProjectConfig] = useState({ name: '', labels: [] })
+  const [projectPath, setProjectPath] = useState('')
 
-  function showEditProjectDialog() {
-    setIsEditProjectDialog(true)
+  const [isOpenProjectDialog, setIsOpenProjectDialog] = useState(false)
+  const [isProjectDialogForNew, setIsProjectDialogForNew] = useState(true)
+
+  function showProjectDialog(isTypeNew) {
+    if (isTypeNew) {
+      setIsProjectDialogForNew(true)
+    } else {
+      setIsProjectDialogForNew(false)
+    }
+
+    setIsOpenProjectDialog(true)
   }
 
-  function handleEditProjectDialogClose(result) {
-    if (result) {
-      if (result.isEdit) {
-        editProjectConfig(result.config)
+  function handleEditProjectDialogClose(config) {
+    if (config) {
+      if (isProjectDialogForNew) {
+        createNewProject(config)
       } else {
-        createNewProject(result.config)
+        editProjectConfig(config)
       }
     }
 
-    setIsEditProjectDialog(false)
+    setIsOpenProjectDialog(false)
   }
 
-  function openProjectFromUserData() {
-    const projectDataDb = new JsonDB(path.join(app.getPath('userData'), 'projectData.json'), true, false)
+  function openProjectFromPath(newPath) {
+    const projectDataDb = new JsonDB(path.join(newPath, 'projectData.json'), true, false)
 
     const projectConfig = projectDataDb.getData('/config')
 
     setProjectConfig(projectConfig)
-    setIsProjectSetup(true)
+    setProjectPath(newPath)
+    setIsProjectOpen(true)
   }
 
   function editProjectConfig(projectConfig) {
-    app.setPath('userData', projectConfig.projectPath)
-
     projectDataDb = new JsonDB(path.join(projectConfig.projectPath, 'projectData.json'), true, false)
+
     projectDataDb.push('/config', { name: projectConfig.projectName, labels: projectConfig.projectLabels })
     projectDataDb.push('/downloadedVideos', [])
     projectDataDb.push('/assignedLabels', [])
 
-    openProjectFromUserData()
+    openProjectFromPath(projectConfig.projectPath)
   }
 
   function createNewProject(projectConfig) {
-    app.setPath('userData', projectConfig.projectPath)
-
     // Create project folders
     fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_full'))
     fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_segments'))
@@ -101,7 +106,7 @@ export default function App() {
     projectDataDb.push('/downloadedVideos', [])
     projectDataDb.push('/assignedLabels', [])
 
-    openProjectFromUserData()
+    openProjectFromPath(projectConfig.projectPath)
   }
 
   function showOpenProjectDialog() {
@@ -110,9 +115,7 @@ export default function App() {
     }
     dialog.showOpenDialog(null, options, (directoryPaths) => {
       if (directoryPaths) {
-        app.setPath('userData', directoryPaths[0])
-
-        openProjectFromUserData()
+        openProjectFromPath(directoryPaths[0])
       }
     })
   }
@@ -124,13 +127,13 @@ export default function App() {
   function onClickMenuItem(item) {
     switch (item) {
       case 0:
-        showEditProjectDialog()
+        showProjectDialog(true)
         break
       case 1:
         showOpenProjectDialog()
         break
       case 2:
-        showEditProjectDialog()
+        showProjectDialog(false)
         break
       case 3:
         setIsApiKeyDialogOpen(true)
@@ -146,7 +149,7 @@ export default function App() {
       <TopBar
         title={projectConfig.name}
         onChangeScene={setCurrentWorkspace}
-        disabledTabs={!isProjectSetup}
+        disabledTabs={!isProjectOpen}
         onClickMenuItem={onClickMenuItem}
       />
 
@@ -156,15 +159,21 @@ export default function App() {
         previousKey={youtubeApiKeyDb}
       />
       <EditProjectDialog
-        isOpen={isEditProjectDialog} onClose={handleEditProjectDialogClose}
-        previousConfig={isProjectSetup ? { ...projectConfig, path: app.getPath('userData') } : null}
+        isOpen={isOpenProjectDialog}
+        onClose={handleEditProjectDialogClose}
+        previousInfo={isProjectDialogForNew ? null : { projectConfig, path: projectPath }}
       />
       <ShortcutsDialog isOpen={isOpenShortcutsDialog} onClose={() => setIsOpenShortcutsDialog(false)} />
 
       {
-        isProjectSetup ?
-          <ProjectScreen youtubeApiKey={youtubeApiKeyDb} workspace={currentWorkspace} projectConfig={projectConfig} /> :
-          <StartScreen onClickNew={showEditProjectDialog} onClickOpen={showOpenProjectDialog} />
+        isProjectOpen ?
+          <ProjectScreen
+            youtubeApiKey={youtubeApiKeyDb}
+            workspace={currentWorkspace}
+            projectConfig={projectConfig}
+            projectPath={projectPath}
+          /> :
+          <StartScreen onClickNew={() => showProjectDialog(true)} onClickOpen={showOpenProjectDialog} />
       }
     </div>
   )
