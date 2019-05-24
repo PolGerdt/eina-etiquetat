@@ -2,7 +2,7 @@ import './LabelWorkspace.css'
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-import { Typography, Button, Chip, Divider } from '@material-ui/core'
+import { Typography, Button, Chip, Divider, Switch, FormControlLabel } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
 
@@ -18,9 +18,11 @@ export default function LabelWorkspace({
   downloadedVideosData, videoUrls,
   assignedVideoLabels,
   projectLabels,
+  isOneLabelMode,
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
-  onClickExportLabels, onClickTrimSegments
+  onClickExportLabels, onClickTrimSegments,
+  onClickOneLabelMode
 }) {
 
   const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone)
@@ -50,41 +52,50 @@ export default function LabelWorkspace({
 
   const onLabelClick = useCallback(
     (name) => {
-      const openLabelIndex = openLabels
-        .findIndex(label => (label.labelName === name && label.outTime === undefined))
-
-      const hasOpenLabel = openLabelIndex !== -1
-      if (hasOpenLabel) {
-        // Close label and send it to the App
-        const openLabel = openLabels[openLabelIndex]
-
-        // If videoTime is bigger than inTime swap inTime with outTime
-        const closedLabel = (videoTime > openLabel.inTime) ?
-          { ...openLabel, outTime: videoTime } :
-          { ...openLabel, inTime: videoTime, outTime: openLabel.inTime }
-
-        onAssignLabel(currentVideoId, closedLabel)
-
-        setOpenLabels(previous => previous.filter((label, i) => i !== openLabelIndex))
+      if (isOneLabelMode) {
+        onAssignLabel(currentVideoId, { id: Date.now(), labelName: name, inTime: 0, outTime: currentVideoDuration })
       } else {
-        // Create new label
-        setOpenLabels(previous => {
-          const updatedLabels = [
-            { id: Date.now(), labelName: name, inTime: videoTime, outTime: undefined },
-            ...previous
-          ]
+        const openLabelIndex = openLabels
+          .findIndex(label => (label.labelName === name && label.outTime === undefined))
 
-          return updatedLabels
-        })
+        const hasOpenLabel = openLabelIndex !== -1
+        if (hasOpenLabel) {
+          // Close label and send it to the App
+          const openLabel = openLabels[openLabelIndex]
 
+          // If videoTime is bigger than inTime swap inTime with outTime
+          const closedLabel = (videoTime > openLabel.inTime) ?
+            { ...openLabel, outTime: videoTime } :
+            { ...openLabel, inTime: videoTime, outTime: openLabel.inTime }
+
+          onAssignLabel(currentVideoId, closedLabel)
+
+          // Remove closed openLabel
+          setOpenLabels(previous => previous.filter((label, i) => i !== openLabelIndex))
+        } else {
+          // Create new label
+          setOpenLabels(previous => {
+            const updatedLabels = [
+              { id: Date.now(), labelName: name, inTime: videoTime, outTime: undefined },
+              ...previous
+            ]
+
+            return updatedLabels
+          })
+
+        }
       }
     },
-    [currentVideoId, onAssignLabel, openLabels, videoTime],
+    [currentVideoId, onAssignLabel, openLabels, videoTime, isOneLabelMode, currentVideoDuration],
   )
 
   function deleteAssignedLabel(labelId) {
     setOpenLabels(previous => previous.filter(label => label.id !== labelId))
     onDeleteAssignedLabel(currentVideoId, labelId)
+  }
+
+  function onChangeLabelMode(e) {
+    onClickOneLabelMode(e.target.checked)
   }
 
   const onLabelsFinish = useCallback(
@@ -102,6 +113,8 @@ export default function LabelWorkspace({
 
   const isVideoDone = (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
   const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.labelName === labelName) !== -1)
+
+
 
   useEffect(() => {
     const firstNineLabels = projectLabels.filter((v, i) => i < 9)
@@ -196,7 +209,7 @@ export default function LabelWorkspace({
           <Button
             variant="contained"
             color="secondary"
-            disabled={currentVideoAssignedLabelsInfo? currentVideoAssignedLabelsInfo.isDone : false}
+            disabled={currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.isDone : false}
             onClick={onLabelsFinish}
             fullWidth
           >
@@ -208,6 +221,18 @@ export default function LabelWorkspace({
       </Main>
 
       <SidePanel>
+        <Typography variant="h5" component="h2" gutterBottom> Label mode </Typography>
+        <FormControlLabel
+          control={
+            <Switch checked={isOneLabelMode} onChange={onChangeLabelMode} />
+          }
+          label="One label mode"
+        />
+
+        <div className="side-panel-divider">
+          <Divider variant="fullWidth" />
+        </div>
+
         <Typography variant="h5" component="h2" gutterBottom> Assigned Labels </Typography>
         <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export Assigned Labels </Button>
 

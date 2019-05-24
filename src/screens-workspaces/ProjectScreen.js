@@ -190,12 +190,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
       )
     )
 
-    setRequestedVideos(previous =>
-      previous.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, downloadState: 'downloaded', downloadPercent: 1, isSelected: false } :
-        video
-      )
-    )
+    setRequestedVideos(previous => previous.filter(video => video.youtubeData.id !== videoId))
 
     setDownloadedVideosDb(previous =>
       [
@@ -360,7 +355,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             .setVideoDuration('00:00:' + (label.outTime - label.inTime).toFixed(3))
             .save(path.join(videoSegmentsPath, segmentName), function (error, file) {
               if (!error) {
-                console.log('Video file: ' + file);
+                console.log('Video file: ' + file)
 
                 segmentsCreated++
 
@@ -400,6 +395,10 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setIsTrimming(true)
   }
 
+  const [isOneLabelMode, setIsOneLabelMode] = useState(false)
+  function onClickOneLabelMode(value) {
+    setIsOneLabelMode(value)
+  }
 
   // Scene setup
   const getWorkspace = (workspace) => {
@@ -424,11 +423,13 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             videoUrls={downloadedVideoUrls}
             assignedVideoLabels={assignedVideoLabelsDb}
             projectLabels={projectConfig.labels}
+            isOneLabelMode={isOneLabelMode}
             onAssignLabel={assignLabel}
             onDeleteAssignedLabel={deleteAssignedLabel}
             onVideoLabelsDone={onVideoLabelsDone}
             onClickExportLabels={exportAssignedLabels}
             onClickTrimSegments={onClickTrimSegments}
+            onClickOneLabelMode={onClickOneLabelMode}
           />
         )
     }

@@ -7,10 +7,10 @@ import { AppBar, Toolbar, IconButton, Typography, Tabs, Tab, Menu, MenuItem, Div
 
 export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenuItem }) {
 
-  const [value, setValue] = useState(0);
+  const [selectedTab, setSelectedTab] = useState(0);
 
-  function handleChange(event, newValue) {
-    setValue(newValue)
+  function handleTabChange(event, newValue) {
+    setSelectedTab(newValue)
     onChangeScene(newValue)
   }
 
@@ -51,7 +51,7 @@ export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenu
           </Typography>
 
           <div style={{ flexGrow: 1 }}>
-            <Tabs value={value} onChange={handleChange} centered>
+            <Tabs value={selectedTab} onChange={handleTabChange} centered>
               <Tab label="Search" disabled={disabledTabs} />
               <Tab label="Label" disabled={disabledTabs} />
             </Tabs>

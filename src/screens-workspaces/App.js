@@ -41,7 +41,6 @@ export default function App() {
   function handleApiKeyDialogClose(result) {
     if (result) {
       setYoutubeApiKeyDb(result)
-      openProjectFromUserData()
     }
 
     setIsApiKeyDialogOpen(false)
@@ -55,11 +54,7 @@ export default function App() {
   const [isProjectDialogForNew, setIsProjectDialogForNew] = useState(true)
 
   function showProjectDialog(isTypeNew) {
-    if (isTypeNew) {
-      setIsProjectDialogForNew(true)
-    } else {
-      setIsProjectDialogForNew(false)
-    }
+    setIsProjectDialogForNew(isTypeNew)
 
     setIsOpenProjectDialog(true)
   }
@@ -163,7 +158,10 @@ export default function App() {
         onClose={handleEditProjectDialogClose}
         previousInfo={isProjectDialogForNew ? null : { projectConfig, path: projectPath }}
       />
-      <ShortcutsDialog isOpen={isOpenShortcutsDialog} onClose={() => setIsOpenShortcutsDialog(false)} />
+      <ShortcutsDialog
+        isOpen={isOpenShortcutsDialog}
+        onClose={() => setIsOpenShortcutsDialog(false)}
+      />
 
       {
         isProjectOpen ?
@@ -173,7 +171,10 @@ export default function App() {
             projectConfig={projectConfig}
             projectPath={projectPath}
           /> :
-          <StartScreen onClickNew={() => showProjectDialog(true)} onClickOpen={showOpenProjectDialog} />
+          <StartScreen
+            onClickNew={() => showProjectDialog(true)}
+            onClickOpen={showOpenProjectDialog}
+          />
       }
     </div>
   )
