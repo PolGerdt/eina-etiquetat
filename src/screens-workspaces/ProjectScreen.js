@@ -303,7 +303,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
     dialog.showSaveDialog(null, opts, (filename) => {
       if (filename) {
-        // Export only done video labels removing the isDone key
+        // Export only done video labels removing the isDone property
         const finishedLabels = assignedVideoLabelsDb
           .filter(videoLabels => videoLabels.isDone)
           .map(videoLabels => ({ videoId: videoLabels.videoId, labels: videoLabels.labels }))
@@ -320,11 +320,6 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
     , [projectPath]
   )
-
-  /*function getVideoUrl(videoId) {
-    const videoPath = path.join(projectPath, 'videos_full', videoId + '.mp4')
-    return videoPath
-  }*/
 
   const downloadedVideoUrls = downloadedVideosDb.reduce((urlsObj, videoData) => (
     { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }

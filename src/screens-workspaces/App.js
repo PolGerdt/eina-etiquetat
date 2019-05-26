@@ -15,19 +15,28 @@ const fs = require('fs')
 const path = require('path')
 const JsonDB = require('node-json-db')
 
+const CryptoJS = require("crypto-js")
+
 let projectDataDb = undefined
 let appConfigDb = new JsonDB(path.join(app.getPath('appData'), 'config-eina-etiquetat.json'), true, false)
+
+let storedInitKey = ''
+
 try {
-  appConfigDb.getData('/youtubeApiKey')
+  const storedInitKeyStr = appConfigDb.getData('/youtubeApiKey')
+  const storedKeyBytes = CryptoJS.AES.decrypt(storedInitKeyStr.toString(), 'ThisIsN0tS3cr3t')
+  storedInitKey = storedKeyBytes.toString(CryptoJS.enc.Utf8)
 } catch (error) {
   appConfigDb.push('/youtubeApiKey', '')
 }
 
-function useYoutubeApiKeyDb(defaultState) {
-  const [youtubeApiKey, setYoutubeApiKey] = useState(appConfigDb.getData('/youtubeApiKey') || defaultState)
+// Add some security with crypto js and AES. ! It is not really secure
+function useYoutubeApiKeyDb() {
+  const [youtubeApiKey, setYoutubeApiKey] = useState(storedInitKey)
 
   useEffect(() => {
-    appConfigDb.push('/youtubeApiKey', youtubeApiKey)
+    const cipherKey = CryptoJS.AES.encrypt(youtubeApiKey, 'ThisIsN0tS3cr3t')
+    appConfigDb.push('/youtubeApiKey', cipherKey.toString())
   }, [youtubeApiKey])
 
   return [youtubeApiKey, setYoutubeApiKey]
@@ -35,7 +44,7 @@ function useYoutubeApiKeyDb(defaultState) {
 
 export default function App() {
 
-  const [youtubeApiKeyDb, setYoutubeApiKeyDb] = useYoutubeApiKeyDb('')
+  const [youtubeApiKeyDb, setYoutubeApiKeyDb] = useYoutubeApiKeyDb()
 
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false)
   function handleApiKeyDialogClose(result) {

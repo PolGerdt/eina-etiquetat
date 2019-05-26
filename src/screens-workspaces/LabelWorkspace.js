@@ -40,9 +40,9 @@ export default function LabelWorkspace({
   const currentVideoAssignedLabelsInfo = assignedVideoLabels.find(videoLabels => videoLabels.videoId === currentVideoId)
   const currentVideoAssignedLabels = currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.labels : []
 
-  const [videoTime, setVideoTime] = useState(0)
+  const [currentVideoTime, setCurrentVideoTime] = useState(0)
   function onVideoTimeChange(time) {
-    setVideoTime(time)
+    setCurrentVideoTime(time)
   }
 
   const [currentVideoDuration, setCurrentVideoDuration] = useState(0.01)
@@ -64,9 +64,9 @@ export default function LabelWorkspace({
           const openLabel = openLabels[openLabelIndex]
 
           // If videoTime is bigger than inTime swap inTime with outTime
-          const closedLabel = (videoTime > openLabel.inTime) ?
-            { ...openLabel, outTime: videoTime } :
-            { ...openLabel, inTime: videoTime, outTime: openLabel.inTime }
+          const closedLabel = (currentVideoTime > openLabel.inTime) ?
+            { ...openLabel, outTime: currentVideoTime } :
+            { ...openLabel, inTime: currentVideoTime, outTime: openLabel.inTime }
 
           onAssignLabel(currentVideoId, closedLabel)
 
@@ -76,7 +76,7 @@ export default function LabelWorkspace({
           // Create new label
           setOpenLabels(previous => {
             const updatedLabels = [
-              { id: Date.now(), labelName: name, inTime: videoTime, outTime: undefined },
+              { id: Date.now(), labelName: name, inTime: currentVideoTime, outTime: undefined },
               ...previous
             ]
 
@@ -86,7 +86,7 @@ export default function LabelWorkspace({
         }
       }
     },
-    [currentVideoId, onAssignLabel, openLabels, videoTime, isOneLabelMode, currentVideoDuration],
+    [currentVideoId, onAssignLabel, openLabels, currentVideoTime, isOneLabelMode, currentVideoDuration],
   )
 
   function deleteAssignedLabel(labelId) {
@@ -184,7 +184,7 @@ export default function LabelWorkspace({
                 openLabels.map((label, i) =>
                   <TimeLabel
                     totalTime={currentVideoDuration}
-                    label={{ ...label, outTime: videoTime }}
+                    label={{ ...label, outTime: currentVideoTime }}
                     isOpen={true}
                     onClickDelete={() => deleteAssignedLabel(label.id)}
                     key={i}

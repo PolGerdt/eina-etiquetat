@@ -22,7 +22,7 @@ export default function EditApiKeyDialog({ isOpen, onClose, previousKey }) {
             To search for youtube videos you need a Youtube Api Key.
           </DialogContentText>
           <DialogContentText color="error">
-            ! Warning ! Keep in mind that it will be stored unencripted at: {path.join(app.getPath('appData'), 'config-eina-etiquetat.json')}
+            ! Warning ! Keep in mind that it will be stored in this machine at: {path.join(app.getPath('appData'), 'config-eina-etiquetat.json')}
           </DialogContentText>
           <TextField
             autoFocus
