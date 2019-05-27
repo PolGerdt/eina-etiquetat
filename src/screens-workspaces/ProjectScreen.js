@@ -377,12 +377,15 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   function onClickTrimSegments() {
     const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
     if (doneLabels.length > 0) {
-      trimSegmentsPromise(doneLabels)
+      displayMessageSnackbar('Trimming videos...')
+      trimSegmentsPromise(doneLabels).then(() => {
+        displayMessageSnackbar('Segments saved to your project folder...')
+      })
     }
   }
 
-  // Extract 10 frames for each label of every video
-  function extract10FramesPromise(doneLabels, fps = 1) {
+  // Extract frames from each video and label at a framerate
+  function extractFramesFpsPromise(doneLabels, fps = 1) {
 
     return doneLabels.reduce((videoPromise, videoLabels) => {
 
@@ -426,10 +429,82 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }, Promise.resolve())
   }
 
-  function onClickExtractFrames(fps) {
+  function onClickExtractFramesFps(fps) {
     const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
     if (doneLabels.length > 0) {
-      extract10FramesPromise(doneLabels, fps)
+      displayMessageSnackbar('Extracting frames...')
+      extractFramesFpsPromise(doneLabels, fps).then(() => {
+        displayMessageSnackbar('Frames extracted to your project folder.')
+      })
+    }
+  }
+
+  function getVideoDuration(videoPath) {
+    return new Promise((resolve) => {
+      let ffmpeg = spawn('ffprobe',
+        ["-i", videoPath, "-v", "error", "-show_streams"]
+      );
+
+      ffmpeg.stdout.on('data', (data) => {
+        const durationMatch = data.toString().match(/duration=(.*)/)
+        resolve(durationMatch[1])
+      })
+
+      ffmpeg.stderr.on('data', (data) => {
+        console.log(`stderr: ${data}`)
+      })
+    })
+  }
+
+  // Extract 10 frames from each video
+  function extractNFramesPromise(doneLabels, numFrames = 10) {
+
+    return doneLabels.reduce((videoPromise, videoLabels) => {
+
+      return videoPromise.then(() => {
+
+        const inputVideoPath = getVideoUrl(videoLabels.videoId)
+
+        getVideoDuration(inputVideoPath)
+          .then(totalDuration => {
+            const fps = numFrames / totalDuration
+
+            const videoFramesPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
+            if (!fs.existsSync(videoFramesPath)) fs.mkdirSync(videoFramesPath)
+
+            return new Promise((resolve, reject) => {
+              const segmentName = `${videoLabels.videoId}_%03d.jpg`
+              const segmentPath = path.join(videoFramesPath, segmentName)
+
+              const process = spawn('ffmpeg',
+                ["-i", inputVideoPath, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
+              )
+
+              process.on('exit', (statusCode) => {
+                if (statusCode === 0) {
+                  console.log('frames saved')
+                  resolve()
+                }
+              })
+
+              process.stderr.on('data', (data) => {
+                console.log(`stderr: ${data}`)
+                reject()
+              })
+            })
+
+          }).catch(err => console.log(err))
+      }).catch(err => console.log(err))
+    }, Promise.resolve())
+  }
+
+  function onClickExtractNFrames(num) {
+    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
+    if (doneLabels.length > 0) {
+      displayMessageSnackbar('Extracting frames...')
+      extractNFramesPromise(doneLabels, num).then(() => {
+        displayMessageSnackbar('Frames extracted to your project folder.')
+      })
     }
   }
 
@@ -468,7 +543,8 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             onClickExportLabels={exportAssignedLabels}
             onClickTrimSegments={onClickTrimSegments}
             onClickOneLabelMode={onClickOneLabelMode}
-            onClickExtractFrames={onClickExtractFrames}
+            onClickExtractFramesFps={onClickExtractFramesFps}
+            onClickExtractNFrames={onClickExtractNFrames}
           />
         )
     }

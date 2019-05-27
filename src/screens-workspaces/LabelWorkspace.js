@@ -21,7 +21,7 @@ export default function LabelWorkspace({
   isOneLabelMode,
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
-  onClickExportLabels, onClickTrimSegments, onClickExtractFrames,
+  onClickExportLabels, onClickTrimSegments, onClickExtractFramesFps, onClickExtractNFrames,
   onClickOneLabelMode
 }) {
 
@@ -132,6 +132,7 @@ export default function LabelWorkspace({
   }, [projectLabels, onLabelClick, onLabelsFinish])
 
   const [extractFps, setExtractFps] = useState(1)
+  const [extractNum, setExtractNum] = useState(10)
 
   return (
     <div className="LabelWorkspace">
@@ -222,6 +223,7 @@ export default function LabelWorkspace({
 
       <SidePanel>
         <Typography variant="h5" component="h2" gutterBottom> Label mode </Typography>
+        <Typography variant="body1" gutterBottom> Set a label for the full video with one click. </Typography>
         <FormControlLabel
           control={
             <Switch checked={isOneLabelMode} onChange={onChangeLabelMode} />
@@ -234,17 +236,25 @@ export default function LabelWorkspace({
         </div>
 
         <Typography variant="h5" component="h2" gutterBottom> Labels </Typography>
-        <Typography variant="body1" gutterBottom> Export Assigned Labels </Typography>
+        <Typography variant="h6" gutterBottom> Export labels </Typography>
+        <Typography variant="body1" gutterBottom> Export Assigned Labels. </Typography>
         <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export </Button>
 
         <div className="side-panel-divider">
           <Divider variant="fullWidth" />
         </div>
 
-        <Typography variant="h5" component="h2" gutterBottom> Segments </Typography>
-        <Typography variant="body1" gutterBottom> Trim segments from videos with finished labels </Typography>
+        <Typography variant="h5" component="h2" gutterBottom> Video </Typography>
+
+        <Typography variant="h6" gutterBottom> Trim segments</Typography>
+        <Typography variant="body1" gutterBottom> Trim segments from videos with finished labels. </Typography>
         <Button variant="contained" color="secondary" onClick={onClickTrimSegments} > Trim segments </Button>
-        <Typography variant="body1" gutterBottom> Extract frames from videos with finished labels at a certain framerate </Typography>
+
+        <div className="side-panel-divider">
+        </div>
+
+        <Typography variant="h6" gutterBottom> Extract frames at fps</Typography>
+        <Typography variant="body1" gutterBottom> Extract frames from segments of videos with finished labels at a certain framerate. </Typography>
         <TextField
           label="Framerate"
           value={extractFps}
@@ -252,7 +262,21 @@ export default function LabelWorkspace({
           type="number"
           margin="normal"
         />
-        <Button variant="contained" color="secondary" onClick={() => onClickExtractFrames(extractFps)} > Extract frames </Button>
+        <Button variant="contained" color="secondary" onClick={() => onClickExtractFramesFps(extractFps)} > Extract frames </Button>
+
+        <div className="side-panel-divider">
+        </div>
+
+        <Typography variant="h6" gutterBottom> Extract N frames</Typography>
+        <Typography variant="body1" gutterBottom> Extract N frames from videos with finished labels. </Typography>
+        <TextField
+          label="Number of frames"
+          value={extractNum}
+          onChange={(e) => setExtractNum(e.target.value)}
+          type="number"
+          margin="normal"
+        />
+        <Button variant="contained" color="secondary" onClick={() => onClickExtractNFrames(extractNum)} > Extract {extractNum} frames </Button>
 
       </SidePanel>
     </div >
