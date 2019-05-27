@@ -103,7 +103,8 @@ export default function App() {
   function createNewProject(projectConfig) {
     // Create project folders
     fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_full'))
-    fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_segments'))
+    fs.mkdirSync(path.join(projectConfig.projectPath, 'video_segments'))
+    fs.mkdirSync(path.join(projectConfig.projectPath, 'extracted_frames'))
 
     projectDataDb = new JsonDB(path.join(projectConfig.projectPath, 'projectData.json'), true, false)
     projectDataDb.push('/config', { name: projectConfig.projectName, labels: projectConfig.projectLabels })

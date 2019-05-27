@@ -17,7 +17,7 @@ const fs = require('fs')
 
 const ytdl = require('ytdl-core')
 
-var ffmpeg = require('ffmpeg')
+const { spawn } = require('child_process')
 
 let projectDataDb = null
 
@@ -200,7 +200,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     )
 
     // Add an empty assignedLabels object
-    setAssignedVideoLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false, isVideoSegmented: false }])
+    setAllAssignedLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false }])
   }
 
   const nextRequestedVideo = requestedVideos.find(video => video.downloadState === 'requested')
@@ -245,12 +245,12 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
   }
 
-  const [assignedVideoLabelsDb, setAssignedVideoLabelsDb] = useProjectDataFieldDb(projectPath, 'assignedLabels', [])
+  const [allAssignedLabelsDb, setAllAssignedLabelsDb] = useProjectDataFieldDb(projectPath, 'assignedLabels', [])
   /*
   [
     {
       videoId: '',
-      labels: [],
+      labels: [{id, labelName, inTime, outTime}],
       isDone: false
     }
   ]
@@ -258,36 +258,41 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   // Creates a labels object if it does not exist or appends the new label
   function assignLabel(videoId, label) {
-    setAssignedVideoLabelsDb(previous =>
-      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
-        ({ ...videoLabel, labels: [label, ...videoLabel.labels], isDone: false }) :
-        videoLabel
+    setAllAssignedLabelsDb(previous =>
+      previous.map(videoLabels => (videoLabels.videoId === videoId) ?
+        (
+          {
+            ...videoLabels,
+            labels: [label, ...videoLabels.labels],
+            isDone: false
+          }
+        ) :
+        videoLabels
       )
     )
   }
 
   function deleteAssignedLabel(videoId, labelId) {
-
-    setAssignedVideoLabelsDb(previous =>
-      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
+    setAllAssignedLabelsDb(previous =>
+      previous.map(videoLabels => (videoLabels.videoId === videoId) ?
         (
           {
-            ...videoLabel,
-            labels: videoLabel.labels.filter(label => label.id !== labelId),
+            ...videoLabels,
+            labels: videoLabels.labels.filter(label => label.id !== labelId),
             isDone: false
           }
         )
         :
-        videoLabel
+        videoLabels
       )
     )
   }
 
   function onVideoLabelsDone(videoId) {
-    setAssignedVideoLabelsDb(previous =>
-      previous.map(videoLabel => (videoLabel.videoId === videoId) ?
-        ({ ...videoLabel, isDone: true }) :
-        videoLabel
+    setAllAssignedLabelsDb(previous =>
+      previous.map(videoLabels => (videoLabels.videoId === videoId) ?
+        ({ ...videoLabels, isDone: true }) :
+        videoLabels
       )
     )
   }
@@ -304,7 +309,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     dialog.showSaveDialog(null, opts, (filename) => {
       if (filename) {
         // Export only done video labels removing the isDone property
-        const finishedLabels = assignedVideoLabelsDb
+        const finishedLabels = allAssignedLabelsDb
           .filter(videoLabels => videoLabels.isDone)
           .map(videoLabels => ({ videoId: videoLabels.videoId, labels: videoLabels.labels }))
 
@@ -325,69 +330,107 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     { ...urlsObj, [videoData.youtubeData.id]: getVideoUrl(videoData.youtubeData.id) }
   ), {})
 
-  const [isTrimming, setIsTrimming] = useState(false)
-  useEffect(() => {
-    function trimVideoSegment(assignedLabels) {
+  // Reduce 2D array of labels [video0 : { labels: []}, video1: { labels: []}...] to promises and resolve sequentially
+  function trimSegmentsPromise(doneLabels) {
 
-      const videoSegmentsPath = path.join(projectPath, 'videos_segments', assignedLabels.videoId)
+    return doneLabels.reduce((videoPromise, videoLabels) => {
 
-      if (!fs.existsSync(videoSegmentsPath))
-        fs.mkdirSync(videoSegmentsPath)
+      return videoPromise.then(() => {
 
-      const process = new ffmpeg(getVideoUrl(assignedLabels.videoId))
+        const inputVideoPath = getVideoUrl(videoLabels.videoId)
 
-      // "-ss", "00:00:38", "-i", "vid0.mp4", "-to", "00:00:04", "-c", "copy", "vid0_3842.mp4"
+        const videoSegmentsPath = path.join(projectPath, 'video_segments', videoLabels.videoId)
 
-      process.then(function (video) {
+        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
 
-        let segmentsCreated = 0
+        return videoLabels.labels.reduce((labelPromise, label) => {
 
-        assignedLabels.labels.forEach((label) => {
-          const segmentName = `${assignedLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}.mp4`
+          return labelPromise.then(() => {
 
-          video
-            .setVideoStartTime('00:00:' + label.inTime.toFixed(3))
-            .setVideoDuration('00:00:' + (label.outTime - label.inTime).toFixed(3))
-            .save(path.join(videoSegmentsPath, segmentName), function (error, file) {
-              if (!error) {
-                console.log('Video file: ' + file)
+            return new Promise((resolve, reject) => {
+              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}.mp4`
+              const segmentPath = path.join(videoSegmentsPath, segmentName)
 
-                segmentsCreated++
+              const process = spawn('ffmpeg',
+                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-c", "copy", segmentPath, "-hide_banner"]
+              )
 
-                if (segmentsCreated === assignedLabels.labels.length) {
-                  setAssignedVideoLabelsDb(previous =>
-                    previous.map(videoLabels => (videoLabels.videoId === assignedLabels.videoId) ?
-                      { ...videoLabels, isVideoSegmented: true } :
-                      videoLabels
-                    )
-                  )
+              process.on('exit', (statusCode) => {
+                if (statusCode === 0) {
+                  console.log('segment saved')
+                  resolve()
                 }
-              } else {
-                console.log(error)
-              }
+              })
+
+              process.stderr.on('data', (err) => {
+                console.log(String(err))
+                reject()
+              })
             })
-        })
-
-      }, function (err) {
-        console.log('Error: ' + err)
-      })
-    }
-
-    if (isTrimming) {
-      const nextVideoLabels = assignedVideoLabelsDb.find(labels => labels.isDone && !labels.isVideoSegmented)
-      if (nextVideoLabels) {
-        displayMessageSnackbar('Creating segments...')
-        trimVideoSegment(nextVideoLabels)
-      } else {
-        displayMessageSnackbar('Segments saved to your project folder.')
-        setIsTrimming(false)
-      }
-    }
-  }, [assignedVideoLabelsDb, setAssignedVideoLabelsDb, isTrimming, projectPath, getVideoUrl])
+          }).catch(err => console.log(err))
+        }, Promise.resolve())
+      }).catch(err => console.log(err))
+    }, Promise.resolve())
+  }
 
   // Trim videos with done assigned labels
   function onClickTrimSegments() {
-    setIsTrimming(true)
+    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
+    if (doneLabels.length > 0) {
+      trimSegmentsPromise(doneLabels)
+    }
+  }
+
+  // Extract 10 frames for each label of every video
+  function extract10FramesPromise(doneLabels, fps = 1) {
+
+    return doneLabels.reduce((videoPromise, videoLabels) => {
+
+      return videoPromise.then(() => {
+
+        const inputVideoPath = getVideoUrl(videoLabels.videoId)
+
+        const videoSegmentsPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
+        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
+
+        return videoLabels.labels.reduce((labelPromise, label) => {
+
+          return labelPromise.then(() => {
+
+            const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
+            if (!fs.existsSync(videoLabelPath)) fs.mkdirSync(videoLabelPath)
+
+            return new Promise((resolve, reject) => {
+              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Date.now()}%03d.jpg`
+              const segmentPath = path.join(videoLabelPath, segmentName)
+
+              const process = spawn('ffmpeg',
+                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
+              )
+
+              process.on('exit', (statusCode) => {
+                if (statusCode === 0) {
+                  console.log('frames saved')
+                  resolve()
+                }
+              })
+
+              process.stderr.on('data', (err) => {
+                console.log(String(err))
+                reject()
+              })
+            })
+          }).catch(err => console.log(err))
+        }, Promise.resolve())
+      })
+    }, Promise.resolve())
+  }
+
+  function onClickExtractFrames(fps) {
+    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
+    if (doneLabels.length > 0) {
+      extract10FramesPromise(doneLabels, fps)
+    }
   }
 
   const [isOneLabelMode, setIsOneLabelMode] = useState(false)
@@ -416,7 +459,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
           <LabelWorkspace
             downloadedVideosData={downloadedVideosDb}
             videoUrls={downloadedVideoUrls}
-            assignedVideoLabels={assignedVideoLabelsDb}
+            assignedVideoLabels={allAssignedLabelsDb}
             projectLabels={projectConfig.labels}
             isOneLabelMode={isOneLabelMode}
             onAssignLabel={assignLabel}
@@ -425,6 +468,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             onClickExportLabels={exportAssignedLabels}
             onClickTrimSegments={onClickTrimSegments}
             onClickOneLabelMode={onClickOneLabelMode}
+            onClickExtractFrames={onClickExtractFrames}
           />
         )
     }

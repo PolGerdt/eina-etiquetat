@@ -4,7 +4,9 @@ import React from 'react'
 
 import { Card, CardActionArea, CardMedia, CardContent, Typography, LinearProgress, Tooltip } from '@material-ui/core'
 
-export default function VideoCard({ videoData, onClick, borderColor='#333' }) {
+const entities = require("entities")
+
+export default function VideoCard({ videoData, onClick, borderColor = '#333' }) {
 
   const { youtubeData, downloadState, downloadPercent } = videoData
 
@@ -24,8 +26,8 @@ export default function VideoCard({ videoData, onClick, borderColor='#333' }) {
             image={youtubeData.thumbnails.medium.url}
           />
           <CardContent>
-            <Tooltip title={videoData.youtubeData.title} enterDelay={500}>
-              <Typography gutterBottom variant="h6" component="h3" noWrap>{videoData.youtubeData.title}</Typography>
+            <Tooltip title={entities.decodeHTML(videoData.youtubeData.title)} enterDelay={500}>
+              <Typography gutterBottom variant="h6" component="h3" noWrap>{entities.decodeHTML(videoData.youtubeData.title)}</Typography>
             </Tooltip>
             <LinearProgress variant="determinate" value={100 * downloadPercent} />
             <Typography component="p">{formattedDownloadPercent} %</Typography>

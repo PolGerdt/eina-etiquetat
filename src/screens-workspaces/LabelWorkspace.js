@@ -2,7 +2,7 @@ import './LabelWorkspace.css'
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-import { Typography, Button, Chip, Divider, Switch, FormControlLabel } from '@material-ui/core'
+import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
 
@@ -21,7 +21,7 @@ export default function LabelWorkspace({
   isOneLabelMode,
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
-  onClickExportLabels, onClickTrimSegments,
+  onClickExportLabels, onClickTrimSegments, onClickExtractFrames,
   onClickOneLabelMode
 }) {
 
@@ -114,8 +114,6 @@ export default function LabelWorkspace({
   const isVideoDone = (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
   const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.labelName === labelName) !== -1)
 
-
-
   useEffect(() => {
     const firstNineLabels = projectLabels.filter((v, i) => i < 9)
     firstNineLabels.forEach((label, i) => {
@@ -132,6 +130,8 @@ export default function LabelWorkspace({
       Mousetrap.unbind(['ctrl+d', 'command+d'])
     }
   }, [projectLabels, onLabelClick, onLabelsFinish])
+
+  const [extractFps, setExtractFps] = useState(1)
 
   return (
     <div className="LabelWorkspace">
@@ -209,7 +209,7 @@ export default function LabelWorkspace({
           <Button
             variant="contained"
             color="secondary"
-            disabled={currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.isDone : false}
+            disabled={currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.isDone : true}
             onClick={onLabelsFinish}
             fullWidth
           >
@@ -233,15 +233,27 @@ export default function LabelWorkspace({
           <Divider variant="fullWidth" />
         </div>
 
-        <Typography variant="h5" component="h2" gutterBottom> Assigned Labels </Typography>
-        <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export Assigned Labels </Button>
+        <Typography variant="h5" component="h2" gutterBottom> Labels </Typography>
+        <Typography variant="body1" gutterBottom> Export Assigned Labels </Typography>
+        <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export </Button>
 
         <div className="side-panel-divider">
           <Divider variant="fullWidth" />
         </div>
 
-        <Typography variant="h5" component="h2" gutterBottom> Create segments </Typography>
-        <Button variant="contained" color="secondary" onClick={onClickTrimSegments} > Trim videos with finished labels </Button>
+        <Typography variant="h5" component="h2" gutterBottom> Segments </Typography>
+        <Typography variant="body1" gutterBottom> Trim segments from videos with finished labels </Typography>
+        <Button variant="contained" color="secondary" onClick={onClickTrimSegments} > Trim segments </Button>
+        <Typography variant="body1" gutterBottom> Extract frames from videos with finished labels at a certain framerate </Typography>
+        <TextField
+          label="Framerate"
+          value={extractFps}
+          onChange={(e) => setExtractFps(e.target.value)}
+          type="number"
+          margin="normal"
+        />
+        <Button variant="contained" color="secondary" onClick={() => onClickExtractFrames(extractFps)} > Extract frames </Button>
+
       </SidePanel>
     </div >
   )
