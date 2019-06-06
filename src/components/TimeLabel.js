@@ -1,12 +1,13 @@
 import './TimeLabel.css'
 import React from 'react'
 
-import { Button } from '@material-ui/core'
+import { IconButton, Typography } from '@material-ui/core'
 import CloseIcon from '@material-ui/icons/Close'
-import pink from '@material-ui/core/colors/pink'
+
+import yellow from '@material-ui/core/colors/yellow'
 import grey from '@material-ui/core/colors/grey'
 
-const openColor = pink[500]
+const openColor = yellow[500]
 const greyColor = grey[300]
 
 export default function TimeLabel({ totalTime, label, isOpen, onClickDelete }) {
@@ -24,10 +25,10 @@ export default function TimeLabel({ totalTime, label, isOpen, onClickDelete }) {
       }}
     >
       <div className="label-info">
-        <p>{label.labelName}</p>
-        <Button variant="text" color="secondary" size="small" onClick={onClickDelete}>
+        <Typography variant="body1"> {label.labelName} </Typography>
+        <IconButton variant="text" color="secondary" size="small" onClick={onClickDelete}>
           <CloseIcon fontSize="small" />
-        </Button>
+        </IconButton >
       </div>
     </div>
   )

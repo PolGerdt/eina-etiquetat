@@ -6,31 +6,40 @@
 .LabelWorkspace .main-label {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  height: calc(100vh - 64px);
 }
 
 .main-label .choose-label-list {
-  padding: 1em 0;
+  padding-top: 0.5em;
 }
 
 .main-label .labels-list {
   padding: 1em 2em;
+  padding-right: calc(2em - 17px);
+  /* Correct scrollbar */
   position: relative;
 }
 
-.fixed-top {
+.main-label .fixed-top {
   padding: 2em;
-  height: 65vh;
-  overflow-y: scroll;
-  overflow-x: hidden;
 }
 
-.scroll-bottom {
+.main-label .scroll-bottom {
   overflow-y: scroll;
-  padding-bottom: 2em;
-  height: calc(35vh - 110px);
+}
+
+.main-label .finish-btn {
+  padding: 0.3em 2em;
 }
 
 .side-panel-divider {
   padding: 2em 0;
+}
+
+.vertical-space {
+  margin: 2em 0;
+}
+
+.bottom-margin {
+  margin-bottom: 1em;
 }

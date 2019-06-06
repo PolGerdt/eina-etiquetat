@@ -2,3 +2,11 @@
   display: flex;
   justify-content: space-between;
 }
+
+.TopBar .tab-grow {
+  flex-grow: 1;
+}
+
+.TopBar .title {
+  margin-left: 1em;
+}

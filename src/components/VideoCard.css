@@ -1,33 +1,28 @@
 .VideoCard {
-  background-color: #ddd;
   width: 100%;
-  border: 0.7em solid #333;
+  position: relative;
 }
 
 .VideoCard img {
   width: 100%;
 }
 
-.VideoCard .video-info {
-  display: flex;
-  flex-direction: column;
+.VideoCard .overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+  z-index: 100;
+  pointer-events: none;
 }
 
-.VideoCard .video-title {
-  font-size: 1em;
-  margin: 0.5em;
-}
-
-.VideoCard .download-video-info {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-}
-
-.VideoCard .download-video-info p {
-  margin: 0.5em;
-}
-
-.VideoCard .download-video-info button {
-  padding: 0.5em 1em;
+.VideoCard .card-icon-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 101;
+  padding: 1em;
+  pointer-events: none;
 }

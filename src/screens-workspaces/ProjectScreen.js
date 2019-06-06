@@ -7,6 +7,7 @@ import CloseIcon from '@material-ui/icons/Close'
 
 import SearchWorkspace from './SearchWorkspace'
 import LabelWorkspace from './LabelWorkspace'
+import ProjectStatsDialog from '../components/ProjectStatsDialog'
 
 import youtubeSearch from 'youtube-search'
 import JsonDB from 'node-json-db'
@@ -43,7 +44,7 @@ function useProjectDataFieldDb(projectPath, field, defaultState) {
   return [fieldData, setFieldData]
 }
 
-export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig, projectPath }) {
+export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig, projectPath, isShowingStatsDialog, onCloseStatsDialog }) {
 
   const [candidateVideos, setCandidateVideos] = useState([])
   const [requestedVideos, setRequestedVideos] = useState([])
@@ -52,7 +53,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   [
     {
       youtubeData: {},
-      downloadState: downloaded,
+      downloadState: downloaded, // none / downloading / downloaded
       downloadPercent: 100,
       isSelected: false
     }
@@ -72,9 +73,11 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setIsSnackbarOpen(true)
     setSnackbarMessage(message)
   }
+
   function closeSnackbar() {
     setIsSnackbarOpen(false)
   }
+
   function searchVideos(query) {
     if (!youtubeApiKey) {
       displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
@@ -116,7 +119,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   function selectAllVideos() {
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video => ({ ...video, isSelected: true, }))
+      previousVideos.map(video => ({ ...video, isSelected: true }))
     )
   }
 
@@ -129,15 +132,23 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   let ytReadableStream = useRef(null)
   let ytWriteableStream = useRef(null)
   function downloadVideo(downloadVideoId) {
+    const isVideoDownloaded = downloadedVideosDb.find(vid => vid.youtubeData.id === downloadVideoId) !== undefined
+
+    // If its already downloaded update info for candidate and requested videos and return
+    if (isVideoDownloaded) {
+      setRequestedVideos(previous => previous.filter(video => video.youtubeData.id !== downloadVideoId))
+      setCandidateVideos(previous => previous.map(video => video.youtubeData.id === downloadVideoId ?
+        { ...video, downloadState: 'downloaded', downloadPercent: 1 } : video
+      ))
+      return
+    }
 
     // Set state before starting the download to prevent multiple downloads
     setCandidateVideos(previousVideos => previousVideos.map(video => (video.youtubeData.id === downloadVideoId) ?
-      { ...video, downloadState: 'downloading' } :
-      video
+      { ...video, downloadState: 'downloading' } : video
     ))
     setRequestedVideos(previous => previous.map(video => (video.youtubeData.id === downloadVideoId) ?
-      { ...video, downloadState: 'downloading' } :
-      video
+      { ...video, downloadState: 'downloading' } : video
     ))
 
     const options = {
@@ -165,6 +176,16 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
     ytReadableStream.current.on('end', () => {
       onVideoDownloaded(downloadVideoId)
+    })
+
+    // If there is an error reset video state
+    ytReadableStream.current.on('error', () => {
+      setCandidateVideos(previousVideos => previousVideos.map(video => (video.youtubeData.id === downloadVideoId) ?
+        { ...video, downloadState: 'requested' } : video
+      ))
+      setRequestedVideos(previous => previous.map(video => (video.youtubeData.id === downloadVideoId) ?
+        { ...video, downloadState: 'requested' } : video
+      ))
     })
   }
 
@@ -207,14 +228,14 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   const downloadingVideo = requestedVideos.find(video => video.downloadState === 'downloading')
 
-  if (downloadingVideo === undefined && nextRequestedVideo) {
+  if (nextRequestedVideo && downloadingVideo === undefined) {
     downloadVideo(nextRequestedVideo.youtubeData.id)
   }
 
   // Set all selected videos to requested download state
   function downloadSelectedVideos() {
     setCandidateVideos(previousVideos =>
-      previousVideos.map(video => (video.isSelected) ?
+      previousVideos.map(video => (video.isSelected && video.downloadState === 'none') ?
         { ...video, downloadState: 'requested', isSelected: false } :
         video
       )
@@ -227,16 +248,19 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setRequestedVideos(previous => [...selectedVideos, ...previous])
   }
 
+  // Destroy download streams, reset state from candidates and remove from requested videos
   function cancelDownloads() {
-    const downloadingVideo = candidateVideos.find(video => video.downloadState === 'downloading')
-    if (downloadingVideo) {
+    const downloadingVideos = requestedVideos.filter(video => video.downloadState === 'downloading')
+
+    if (downloadingVideos) {
       setCandidateVideos(previousVideos =>
-        previousVideos.map(video => ({ ...video, downloadState: 'none', downloadPercent: 0 }))
+        previousVideos.map(video => video.downloadState === 'downloading' || video.downloadState === 'requested' ?
+          ({ ...video, downloadState: 'none', downloadPercent: 0 }) :
+          video
+        )
       )
 
-      setRequestedVideos(previous =>
-        previous.map(video => ({ ...video, downloadState: 'none', downloadPercent: 0 }))
-      )
+      setRequestedVideos([])
 
       fs.unlinkSync(getVideoUrl(downloadingVideo.youtubeData.id))
 
@@ -281,8 +305,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             labels: videoLabels.labels.filter(label => label.id !== labelId),
             isDone: false
           }
-        )
-        :
+        ) :
         videoLabels
       )
     )
@@ -404,7 +427,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             if (!fs.existsSync(videoLabelPath)) fs.mkdirSync(videoLabelPath)
 
             return new Promise((resolve, reject) => {
-              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Date.now()}%03d.jpg`
+              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
               const segmentPath = path.join(videoLabelPath, segmentName)
 
               const process = spawn('ffmpeg',
@@ -439,25 +462,8 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
   }
 
-  function getVideoDuration(videoPath) {
-    return new Promise((resolve) => {
-      let ffmpeg = spawn('ffprobe',
-        ["-i", videoPath, "-v", "error", "-show_streams"]
-      );
-
-      ffmpeg.stdout.on('data', (data) => {
-        const durationMatch = data.toString().match(/duration=(.*)/)
-        resolve(durationMatch[1])
-      })
-
-      ffmpeg.stderr.on('data', (data) => {
-        console.log(`stderr: ${data}`)
-      })
-    })
-  }
-
-  // Extract 10 frames from each video
-  function extractNFramesPromise(doneLabels, numFrames = 10) {
+  // Extract N frames for each label and video
+  function extractNFramesPromise(doneLabels, numFrames) {
 
     return doneLabels.reduce((videoPromise, videoLabels) => {
 
@@ -465,19 +471,24 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
         const inputVideoPath = getVideoUrl(videoLabels.videoId)
 
-        getVideoDuration(inputVideoPath)
-          .then(totalDuration => {
-            const fps = numFrames / totalDuration
+        const videoSegmentsPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
+        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
 
-            const videoFramesPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
-            if (!fs.existsSync(videoFramesPath)) fs.mkdirSync(videoFramesPath)
+        return videoLabels.labels.reduce((labelPromise, label) => {
+
+          return labelPromise.then(() => {
+
+            const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
+            if (!fs.existsSync(videoLabelPath)) fs.mkdirSync(videoLabelPath)
 
             return new Promise((resolve, reject) => {
-              const segmentName = `${videoLabels.videoId}_%03d.jpg`
-              const segmentPath = path.join(videoFramesPath, segmentName)
+              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
+              const segmentPath = path.join(videoLabelPath, segmentName)
+
+              const fps = numFrames / (label.outTime - label.inTime)
 
               const process = spawn('ffmpeg',
-                ["-i", inputVideoPath, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
+                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
               )
 
               process.on('exit', (statusCode) => {
@@ -487,14 +498,14 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
                 }
               })
 
-              process.stderr.on('data', (data) => {
-                console.log(`stderr: ${data}`)
+              process.stderr.on('data', (err) => {
+                console.log(String(err))
                 reject()
               })
             })
-
           }).catch(err => console.log(err))
-      }).catch(err => console.log(err))
+        }, Promise.resolve())
+      })
     }, Promise.resolve())
   }
 
@@ -508,9 +519,26 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
   }
 
+  // Delete a downloaded video from disc and database and delete assigned labels
+  function deleteDownloadedVideo(videoId) {
+    const videoPath = getVideoUrl(videoId)
+    const videoExists = fs.existsSync(videoPath)
+
+    if (videoExists) {
+      fs.unlinkSync(videoPath)
+      setDownloadedVideosDb(previous => previous.filter(video => video.youtubeData.id !== videoId))
+      setAllAssignedLabelsDb(previous => previous.filter(label => label.videoId !== videoId))
+    }
+  }
+
   const [isOneLabelMode, setIsOneLabelMode] = useState(false)
   function onClickOneLabelMode(value) {
     setIsOneLabelMode(value)
+  }
+
+  const [numCols, setNumCols] = useState(2)
+  function onChangeNumCols(num) {
+    setNumCols(num)
   }
 
   // Scene setup
@@ -520,11 +548,13 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
         return (
           <SearchWorkspace
             videos={candidateVideos}
+            numCols={numCols}
             requestedVideos={requestedVideos}
             onCardClick={toggleVideoSelection}
             onSelectAll={selectAllVideos}
             onInvertSelection={invertSelectionAllVideos}
             onSubmitSearch={searchVideos}
+            onChangeNumCols={onChangeNumCols}
             onClickDownloadSelectedVideos={downloadSelectedVideos}
             onClickCancelDownloads={cancelDownloads}
           />
@@ -545,6 +575,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             onClickOneLabelMode={onClickOneLabelMode}
             onClickExtractFramesFps={onClickExtractFramesFps}
             onClickExtractNFrames={onClickExtractNFrames}
+            onDeleteVideo={deleteDownloadedVideo}
           />
         )
     }
@@ -573,6 +604,12 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             <CloseIcon />
           </IconButton>,
         ]}
+      />
+      <ProjectStatsDialog
+        onClose={onCloseStatsDialog}
+        isOpen={isShowingStatsDialog}
+        downloadedVideos={downloadedVideosDb}
+        assignedLabels={allAssignedLabelsDb}
       />
     </div>
   )

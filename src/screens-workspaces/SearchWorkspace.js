@@ -14,8 +14,10 @@ const Mousetrap = require('mousetrap')
 // Search videos to get candidates and filter them
 export default function SearchWorkspace({
   videos, requestedVideos,
+  numCols,
   onSelectAll, onInvertSelection, onCardClick,
   onSubmitSearch,
+  onChangeNumCols,
   onClickDownloadSelectedVideos, onClickCancelDownloads
 }) {
 
@@ -54,7 +56,10 @@ export default function SearchWorkspace({
     onSubmitSearch(query)
   }
 
-  const [numCols, setNumCols] = useState(2)
+  const [numVideosSelected, setNumVideosSelected] = useState(0)
+  useEffect(() => {
+    setNumVideosSelected(videos.filter(video => video.isSelected).length)
+  }, [videos])
 
   // Shortcuts
   useEffect(() => {
@@ -149,7 +154,9 @@ export default function SearchWorkspace({
             </Grid>
           </Grid>
 
-          <Button variant="contained" color="primary" type="submit" fullWidth> Search </Button>
+          <div className="button-top-margin">
+            <Button variant="contained" color="secondary" type="submit" fullWidth > Search </Button>
+          </div>
         </form>
 
         <div className="side-panel-divider">
@@ -157,14 +164,17 @@ export default function SearchWorkspace({
         </div>
 
         <Typography variant="h5" component="h2" gutterBottom> Selection </Typography>
-        <Grid container spacing={16}>
-          <Grid item>
-            <Button variant="contained" color="secondary" onClick={onSelectAll}> Select All </Button>
+        <Typography variant="body1" gutterBottom> {numVideosSelected} videos selected </Typography>
+        <div className="button-top-margin">
+          <Grid container spacing={16}>
+            <Grid item>
+              <Button variant="contained" color="secondary" onClick={onSelectAll}> Select All </Button>
+            </Grid>
+            <Grid item>
+              <Button variant="contained" color="secondary" onClick={onInvertSelection}> Invert Selection </Button>
+            </Grid>
           </Grid>
-          <Grid item>
-            <Button variant="contained" color="secondary" onClick={onInvertSelection}> Invert Selection </Button>
-          </Grid>
-        </Grid>
+        </div>
 
       </SidePanel>
 
@@ -173,15 +183,14 @@ export default function SearchWorkspace({
           <Slider
             value={numCols}
             min={1} max={6} step={1}
-            onChange={(e, v) => setNumCols(v)}
+            onChange={(e, v) => onChangeNumCols(v)}
           />
         </div>
         <div className="search-results">
-          <GridList cellHeight={'auto'} cols={numCols}>
+          <GridList cellHeight={'auto'} cols={numCols} spacing={10}>
             {videos.map(candidateVideo =>
-              <GridListTile key={candidateVideo.youtubeData.id}>
+              <GridListTile key={candidateVideo.youtubeData.id} className="grid-tile">
                 <VideoCard
-                  borderColor={candidateVideo.isSelected ? '#3f3' : '#333'}
                   videoData={candidateVideo}
                   onClick={() => onCardClick(candidateVideo.youtubeData.id)}
                 />
@@ -193,35 +202,41 @@ export default function SearchWorkspace({
 
 
       <SidePanel>
-        <Typography variant="h5" component="h2" gutterBottom> Download </Typography>
-        <Grid container spacing={16}>
-          <Grid item>
-            <Button variant="contained" color="secondary" onClick={onClickDownloadSelectedVideos} > Download Selected Videos </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} > Cancel All Downloads </Button>
-          </Grid>
-        </Grid>
+        <div className="divided-scroll">
+          <div>
+            <Typography variant="h5" gutterBottom className="section-title"> Download </Typography>
 
-        <div className="side-panel-divider">
-          <Divider variant="fullWidth" />
-        </div>
+            <Grid container spacing={16}>
+              <Grid item>
+                <Button variant="contained" color="secondary" onClick={onClickDownloadSelectedVideos} > Download Selected Videos </Button>
+              </Grid>
+              <Grid item>
+                <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} > Cancel All Downloads </Button>
+              </Grid>
+            </Grid>
 
-        <Typography variant="h5" component="h2" gutterBottom> Requested videos </Typography>
-        {
-          requestedVideos.map(video =>
-            <div
-              style={{ marginTop: '1em' }}
-              key={video.youtubeData.id}>
-              <VideoCard
-                borderColor={video.isSelected ? '#3f3' : '#333'}
-                videoData={video}
-                onClick={() => { }}
-              />
+            <div className="side-panel-divider">
+              <Divider variant="fullWidth" />
             </div>
-          )
-        }
 
+            <Typography variant="h5" gutterBottom> Requested videos </Typography>
+          </div>
+
+          <div className="scroll-requested">
+            {
+              requestedVideos.map(video =>
+                <div
+                  style={{ marginTop: '1em' }}
+                  key={video.youtubeData.id}>
+                  <VideoCard
+                    videoData={video}
+                    onClick={() => { }}
+                  />
+                </div>
+              )
+            }
+          </div>
+        </div>
       </SidePanel>
     </div>
   )

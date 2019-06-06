@@ -13,6 +13,27 @@
 }
 
 .search-results {
-  height: calc(100vh - 50px - 60px); /* -TopBar -slider-container */
+  height: calc(100vh - 64px - 60px); /* all height - TopBar - slider-container */
+  overflow-y: scroll;
+  padding: 1em;
+}
+
+.button-top-margin {
+  margin-top: 0.5em;
+}
+
+.grid-tile div:first-of-type {
+  overflow: visible;
+}
+
+.divided-scroll {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px - 32px);
+  margin: 0;
+  padding: 0;
+}
+
+.scroll-requested {
   overflow-y: scroll;
 }

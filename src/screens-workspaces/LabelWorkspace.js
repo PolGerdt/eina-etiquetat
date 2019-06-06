@@ -2,9 +2,10 @@ import './LabelWorkspace.css'
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField } from '@material-ui/core'
+import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField, Paper, Grid, IconButton } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
+import DeleteIcon from '@material-ui/icons/Delete'
 
 import SidePanel from '../components/SidePanel'
 import Main from '../components/Main'
@@ -22,7 +23,8 @@ export default function LabelWorkspace({
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
   onClickExportLabels, onClickTrimSegments, onClickExtractFramesFps, onClickExtractNFrames,
-  onClickOneLabelMode
+  onClickOneLabelMode,
+  onDeleteVideo
 }) {
 
   const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone)
@@ -98,18 +100,34 @@ export default function LabelWorkspace({
     onClickOneLabelMode(e.target.checked)
   }
 
-  const onLabelsFinish = useCallback(
+  // Checks the next video not done and sets the current video
+  const loadNextVideo = useCallback(
     () => {
       const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone && videoLabels.videoId !== currentVideoId)
 
       if (nextVideoLabels !== undefined) {
         setCurrentVideoId(nextVideoLabels.videoId)
       }
-
-      onVideoLabelsDone(currentVideoId)
     },
-    [assignedVideoLabels, onVideoLabelsDone, currentVideoId]
+    [currentVideoId, assignedVideoLabels]
   )
+
+  const onLabelsFinish = useCallback(
+    () => {
+      onVideoLabelsDone(currentVideoId)
+      loadNextVideo()
+    },
+    [currentVideoId, loadNextVideo, onVideoLabelsDone]
+  )
+
+  // Callback to delete video and load next if playing
+  function onClickDeleteVideo(videoId) {
+    onDeleteVideo(videoId)
+
+    if (currentVideoId === videoId) {
+      loadNextVideo()
+    }
+  }
 
   const isVideoDone = (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
   const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.labelName === labelName) !== -1)
@@ -141,14 +159,21 @@ export default function LabelWorkspace({
 
         {
           downloadedVideosData.map(loadedVideoData =>
-            <div
-              style={{ marginTop: '1em' }}
-              key={loadedVideoData.youtubeData.id}>
+            <div className="bottom-margin" key={loadedVideoData.youtubeData.id}>
               <VideoCard
-                borderColor={isVideoDone(loadedVideoData.youtubeData.id) ? '#33f' : '#333'}
                 videoData={loadedVideoData}
+                isLabeled={isVideoDone(loadedVideoData.youtubeData.id)}
                 onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
               />
+
+              <Button
+                variant="contained" color="secondary"
+                onClick={() => onClickDeleteVideo(loadedVideoData.youtubeData.id)}
+                fullWidth
+              >
+                <DeleteIcon />
+                Delete
+              </Button>
             </div>
           )
         }
@@ -156,8 +181,7 @@ export default function LabelWorkspace({
 
       <Main>
         <div className="main-label">
-
-          <div className="fixed-top">
+          <Paper className="fixed-top">
             <VideoScroller
               videoSrc={videoUrls[currentVideoId]}
               onVideoTimeChange={onVideoTimeChange}
@@ -171,13 +195,13 @@ export default function LabelWorkspace({
                     key={i}
                     icon={isLabelOpen(labelName) ? <CheckIcon /> : <LabelIcon />}
                     color={isLabelOpen(labelName) ? 'secondary' : 'default'}
-                    label={labelName}
+                    label={`${labelName} [${i + 1}]`}
                     onClick={() => onLabelClick(labelName)}
                   />
                 )
               }
             </div>
-          </div>
+          </Paper>
 
           <div className="scroll-bottom">
             <div className="labels-list">
@@ -207,18 +231,18 @@ export default function LabelWorkspace({
             </div>
           </div>
 
-          <Button
-            variant="contained"
-            color="secondary"
-            disabled={currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.isDone : true}
-            onClick={onLabelsFinish}
-            fullWidth
-          >
-            Finished
+          <div className="finish-btn">
+            <Button variant="contained" color="secondary"
+              disabled={currentVideoAssignedLabelsInfo ? currentVideoAssignedLabelsInfo.isDone : true}
+              onClick={onLabelsFinish}
+              fullWidth
+            >
+              Finished
             </Button>
+          </div>
+
 
         </div>
-
       </Main>
 
       <SidePanel>
@@ -226,7 +250,7 @@ export default function LabelWorkspace({
         <Typography variant="body1" gutterBottom> Set a label for the full video with one click. </Typography>
         <FormControlLabel
           control={
-            <Switch checked={isOneLabelMode} onChange={onChangeLabelMode} />
+            <Switch checked={isOneLabelMode} onChange={onChangeLabelMode} color="secondary" />
           }
           label="One label mode"
         />
@@ -236,7 +260,6 @@ export default function LabelWorkspace({
         </div>
 
         <Typography variant="h5" component="h2" gutterBottom> Labels </Typography>
-        <Typography variant="h6" gutterBottom> Export labels </Typography>
         <Typography variant="body1" gutterBottom> Export Assigned Labels. </Typography>
         <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export </Button>
 
@@ -246,38 +269,45 @@ export default function LabelWorkspace({
 
         <Typography variant="h5" component="h2" gutterBottom> Video </Typography>
 
-        <Typography variant="h6" gutterBottom> Trim segments</Typography>
         <Typography variant="body1" gutterBottom> Trim segments from videos with finished labels. </Typography>
         <Button variant="contained" color="secondary" onClick={onClickTrimSegments} > Trim segments </Button>
 
-        <div className="side-panel-divider">
-        </div>
+        <div className="vertical-space"></div>
 
-        <Typography variant="h6" gutterBottom> Extract frames at fps</Typography>
         <Typography variant="body1" gutterBottom> Extract frames from segments of videos with finished labels at a certain framerate. </Typography>
-        <TextField
-          label="Framerate"
-          value={extractFps}
-          onChange={(e) => setExtractFps(e.target.value)}
-          type="number"
-          margin="normal"
-        />
-        <Button variant="contained" color="secondary" onClick={() => onClickExtractFramesFps(extractFps)} > Extract frames </Button>
+        <Grid container direction="row" alignItems="center" spacing={8}>
+          <Grid item>
+            <TextField
+              label="Framerate"
+              value={extractFps}
+              onChange={(e) => setExtractFps(e.target.value)}
+              type="number"
+              margin="normal"
+            />
+          </Grid>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={() => onClickExtractFramesFps(extractFps)} > Extract frames </Button>
+          </Grid>
 
-        <div className="side-panel-divider">
-        </div>
+        </Grid>
 
-        <Typography variant="h6" gutterBottom> Extract N frames</Typography>
-        <Typography variant="body1" gutterBottom> Extract N frames from videos with finished labels. </Typography>
-        <TextField
-          label="Number of frames"
-          value={extractNum}
-          onChange={(e) => setExtractNum(e.target.value)}
-          type="number"
-          margin="normal"
-        />
-        <Button variant="contained" color="secondary" onClick={() => onClickExtractNFrames(extractNum)} > Extract {extractNum} frames </Button>
+        <div className="vertical-space"></div>
 
+        <Typography variant="body1" gutterBottom> Extract N frames from each label of videos with finished labels. </Typography>
+        <Grid container direction="row" alignItems="center" spacing={8}>
+          <Grid item>
+            <TextField
+              label="Number of frames"
+              value={extractNum}
+              onChange={(e) => setExtractNum(e.target.value)}
+              type="number"
+              margin="normal"
+            />
+          </Grid>
+          <Grid item>
+            <Button variant="contained" color="secondary" onClick={() => onClickExtractNFrames(extractNum)} > Extract {extractNum} frames </Button>
+          </Grid>
+        </Grid>
       </SidePanel>
     </div >
   )

@@ -32,6 +32,7 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
   function onChangeLabel(e) {
     setCurrentLabel(e.target.value)
   }
+
   const [projectLabels, setProjectLabels] = useState([])
   function onClickAddLabel() {
     setProjectLabels(previous => [...previous, currentLabel])
@@ -69,10 +70,12 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
       <Dialog open={isOpen}>
         <DialogTitle>Project settings</DialogTitle>
         <DialogContent>
+
           <DialogContentText>
-            To start a project, please enter a name, some initial labels (you can change them later) and a project folder.
+            To start a project please enter a name, some initial labels (you can change them later) and a project folder.
             Keep in mind that you will need a Youtube Api Key setup in your app configuration to search videos.
           </DialogContentText>
+
           <TextField
             autoFocus
             margin="normal"
@@ -84,6 +87,7 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
             onChange={onChangeProjectName}
             variant="outlined"
           />
+
           <FormControl margin="normal" fullWidth>
             <InputLabel htmlFor="label">Label</InputLabel>
             <Input
@@ -93,7 +97,7 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
               onChange={onChangeLabel}
               endAdornment={
                 <InputAdornment position="end">
-                  <IconButton onClick={onClickAddLabel}>
+                  <IconButton onClick={onClickAddLabel} color="secondary">
                     <AddCircleIcon />
                   </IconButton>
                 </InputAdornment>
@@ -104,21 +108,25 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
           <FormControl margin="normal" fullWidth>
             <div>
               {
-                projectLabels.map((label) => <Chip key={label} label={label} onDelete={() => deleteLabel(label)} />)
+                projectLabels.map((label) =>
+                  <Chip className="label-chip" key={label} label={label} onDelete={() => deleteLabel(label)} color="secondary" />
+                )
               }
             </div>
           </FormControl>
 
           <FormControl margin="normal" fullWidth>
             <div>
-              <Typography>Current folder: {projectPath}</Typography>
+              <Typography variant="body1" gutterBottom>Current folder:</Typography>
+              <Typography variant="body1" gutterBottom color="secondary">{projectPath}</Typography>
               <Button variant="contained" onClick={onClickFolder}>Select an empty folder</Button>
             </div>
           </FormControl>
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={onClickCancel} color="primary"> Cancel </Button>
-          <Button onClick={onClickSave} color="primary"> Save </Button>
+          <Button onClick={onClickCancel} color="default" variant="contained"> Cancel </Button>
+          <Button onClick={onClickSave} color="secondary" variant="contained"> Save </Button>
         </DialogActions>
       </Dialog>
     </div>

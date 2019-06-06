@@ -10,6 +10,20 @@ import ShortcutsDialog from '../components/ShortcutsDialog'
 
 import TopBar from '../components/TopBar'
 
+import { Paper } from '@material-ui/core'
+import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles'
+import blue from '@material-ui/core/colors/blue'
+import yellow from '@material-ui/core/colors/yellow'
+
+const theme = createMuiTheme({
+  palette: {
+    type: 'dark',
+    primary: { main: blue[500] },
+    secondary: { main: yellow[500] },
+  },
+  typography: { useNextVariants: true }
+})
+
 const { app, dialog } = require('electron').remote
 const fs = require('fs')
 const path = require('path')
@@ -30,7 +44,8 @@ try {
   appConfigDb.push('/youtubeApiKey', '')
 }
 
-// Add some security with crypto js and AES. ! It is not really secure
+// Add some security with crypto js and AES
+// ! It is not very secure because someone could read the AES secret key from the source code
 function useYoutubeApiKeyDb() {
   const [youtubeApiKey, setYoutubeApiKey] = useState(storedInitKey)
 
@@ -83,11 +98,14 @@ export default function App() {
   function openProjectFromPath(newPath) {
     const projectDataDb = new JsonDB(path.join(newPath, 'projectData.json'), true, false)
 
-    const projectConfig = projectDataDb.getData('/config')
-
-    setProjectConfig(projectConfig)
-    setProjectPath(newPath)
-    setIsProjectOpen(true)
+    try {
+      const projectConfig = projectDataDb.getData('/config')
+      setProjectConfig(projectConfig)
+      setProjectPath(newPath)
+      setIsProjectOpen(true)
+    } catch (error) {
+      // Not a project folder
+    }
   }
 
   function editProjectConfig(projectConfig) {
@@ -129,6 +147,8 @@ export default function App() {
 
   const [isOpenShortcutsDialog, setIsOpenShortcutsDialog] = useState(false)
 
+  const [isOpenStatsDialog, setIsOpenStatsDialog] = useState(false)
+
   function onClickMenuItem(item) {
     switch (item) {
       case 0:
@@ -141,51 +161,61 @@ export default function App() {
         showProjectDialog(false)
         break
       case 3:
-        setIsApiKeyDialogOpen(true)
+        setIsOpenStatsDialog(true)
         break
       case 4:
+        setIsApiKeyDialogOpen(true)
+        break
+      case 5:
         setIsOpenShortcutsDialog(true)
         break
     }
   }
 
   return (
-    <div className="App">
-      <TopBar
-        title={projectConfig.name}
-        onChangeScene={setCurrentWorkspace}
-        disabledTabs={!isProjectOpen}
-        onClickMenuItem={onClickMenuItem}
-      />
-
-      <EditApiKeyDialog
-        isOpen={isApiKeyDialogOpen}
-        onClose={handleApiKeyDialogClose}
-        previousKey={youtubeApiKeyDb}
-      />
-      <EditProjectDialog
-        isOpen={isOpenProjectDialog}
-        onClose={handleEditProjectDialogClose}
-        previousInfo={isProjectDialogForNew ? null : { projectConfig, path: projectPath }}
-      />
-      <ShortcutsDialog
-        isOpen={isOpenShortcutsDialog}
-        onClose={() => setIsOpenShortcutsDialog(false)}
-      />
-
-      {
-        isProjectOpen ?
-          <ProjectScreen
-            youtubeApiKey={youtubeApiKeyDb}
-            workspace={currentWorkspace}
-            projectConfig={projectConfig}
-            projectPath={projectPath}
-          /> :
-          <StartScreen
-            onClickNew={() => showProjectDialog(true)}
-            onClickOpen={showOpenProjectDialog}
+    <MuiThemeProvider theme={theme}>
+      <div className="App">
+        <Paper square={true}>
+          <TopBar
+            title={projectConfig.name}
+            onChangeScene={setCurrentWorkspace}
+            disabledTabs={!isProjectOpen}
+            onClickMenuItem={onClickMenuItem}
           />
-      }
-    </div>
+
+          <EditApiKeyDialog
+            isOpen={isApiKeyDialogOpen}
+            onClose={handleApiKeyDialogClose}
+            previousKey={youtubeApiKeyDb}
+          />
+          <EditProjectDialog
+            isOpen={isOpenProjectDialog}
+            onClose={handleEditProjectDialogClose}
+            previousInfo={isProjectDialogForNew ? null : { projectConfig, path: projectPath }}
+          />
+          <ShortcutsDialog
+            isOpen={isOpenShortcutsDialog}
+            onClose={() => setIsOpenShortcutsDialog(false)}
+          />
+
+          {
+            isProjectOpen ?
+              <ProjectScreen
+                youtubeApiKey={youtubeApiKeyDb}
+                workspace={currentWorkspace}
+                projectConfig={projectConfig}
+                projectPath={projectPath}
+                isShowingStatsDialog={isOpenStatsDialog}
+                onCloseStatsDialog={() => setIsOpenStatsDialog(false)}
+              /> :
+              <StartScreen
+                onClickNew={() => showProjectDialog(true)}
+                onClickOpen={showOpenProjectDialog}
+              />
+          }
+        </Paper>
+      </div>
+    </MuiThemeProvider>
+
   )
 }
