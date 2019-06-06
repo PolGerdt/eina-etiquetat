@@ -94,14 +94,21 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
     youtubeSearch(query.text, opts, function (err, youtubeResults) {
       if (!err) {
-        let searchCandidateVideos = youtubeResults.map(result => (
-          {
-            youtubeData: result,
-            downloadState: 'none',
-            downloadPercent: 0,
-            isSelected: false
+        let searchCandidateVideos = youtubeResults.map(result => {
+          const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id)
+
+          if (requestedVideoWithSameId === undefined) {
+            return {
+              youtubeData: result,
+              downloadState: 'none',
+              downloadPercent: 0,
+              isSelected: false
+            }
+          } else {
+            return requestedVideoWithSameId
           }
-        ))
+
+        })
 
         setCandidateVideos(searchCandidateVideos)
       }

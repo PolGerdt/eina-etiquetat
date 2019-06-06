@@ -37,3 +37,7 @@
 .scroll-requested {
   overflow-y: scroll;
 }
+
+.margin-bottom {
+  margin-bottom: 2em;
+}

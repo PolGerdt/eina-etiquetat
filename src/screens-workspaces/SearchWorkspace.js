@@ -226,7 +226,7 @@ export default function SearchWorkspace({
             {
               requestedVideos.map(video =>
                 <div
-                  style={{ marginTop: '1em' }}
+                  className="margin-bottom"
                   key={video.youtubeData.id}>
                   <VideoCard
                     videoData={video}
