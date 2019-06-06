@@ -2,7 +2,7 @@ import './LabelWorkspace.css'
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField, Paper, Grid, IconButton } from '@material-ui/core'
+import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField, Paper, Grid } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
 import DeleteIcon from '@material-ui/icons/Delete'
@@ -31,6 +31,11 @@ export default function LabelWorkspace({
 
   const [currentVideoId, setCurrentVideoId] = useState(nextVideoLabels ? nextVideoLabels.videoId : '')
 
+  // When current video is changed scroll to view
+  useEffect(() => {
+    document.getElementById(currentVideoId).scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
+  }, [currentVideoId])
+
   // Labels for current video
   const [openLabels, setOpenLabels] = useState([])
   /*
@@ -51,6 +56,14 @@ export default function LabelWorkspace({
   function onVideoDurationChange(videoDuration) {
     setCurrentVideoDuration(videoDuration)
   }
+
+  // Delete last open label and trigger assigned labels update to not done
+  const deleteLastOpenLabel = useCallback(
+    () => {
+      setOpenLabels(previous => previous.filter((label, i) => i > 0))
+    },
+    []
+  )
 
   const onLabelClick = useCallback(
     (name) => {
@@ -140,14 +153,18 @@ export default function LabelWorkspace({
 
     Mousetrap.bind(['ctrl+d', 'command+d'], () => onLabelsFinish())
 
+    Mousetrap.bind(['ctrl+x', 'command+x'], () => deleteLastOpenLabel())
+
     return () => {
       firstNineLabels.forEach((label, i) => {
         Mousetrap.unbind((i + 1).toString())
       })
 
       Mousetrap.unbind(['ctrl+d', 'command+d'])
+
+      Mousetrap.unbind(['ctrl+x', 'command+x'])
     }
-  }, [projectLabels, onLabelClick, onLabelsFinish])
+  }, [projectLabels, onLabelClick, onLabelsFinish, deleteLastOpenLabel])
 
   const [extractFps, setExtractFps] = useState(1)
   const [extractNum, setExtractNum] = useState(10)
@@ -159,7 +176,11 @@ export default function LabelWorkspace({
 
         {
           downloadedVideosData.map(loadedVideoData =>
-            <div className="bottom-margin" key={loadedVideoData.youtubeData.id}>
+            <div
+              id={loadedVideoData.youtubeData.id}
+              className="bottom-margin"
+              key={loadedVideoData.youtubeData.id}
+            >
               <VideoCard
                 videoData={loadedVideoData}
                 isLabeled={isVideoDone(loadedVideoData.youtubeData.id)}
@@ -192,6 +213,7 @@ export default function LabelWorkspace({
               {
                 projectLabels.map((labelName, i) =>
                   <Chip
+                    className="label-chip"
                     key={i}
                     icon={isLabelOpen(labelName) ? <CheckIcon /> : <LabelIcon />}
                     color={isLabelOpen(labelName) ? 'secondary' : 'default'}
