@@ -13,7 +13,8 @@
 }
 
 .search-results {
-  height: calc(100vh - 64px - 60px); /* all height - TopBar - slider-container */
+  height: calc(100vh - 64px - 60px);
+  /* all height - TopBar - slider-container */
   overflow-y: scroll;
   padding: 1em;
 }
@@ -40,4 +41,8 @@
 
 .margin-bottom {
   margin-bottom: 2em;
+}
+
+.SearchWorkspace .right-margin {
+  margin-right: 0.5em;
 }

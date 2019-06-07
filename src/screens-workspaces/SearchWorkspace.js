@@ -5,6 +5,12 @@ import React, { useState, useEffect } from 'react'
 import { Typography, TextField, MenuItem, Button, Divider, Grid, GridList, GridListTile } from '@material-ui/core'
 import Slider from '@material-ui/lab/Slider'
 
+import SelectAllIcon from '@material-ui/icons/SelectAll'
+import SwapHorizIcon from '@material-ui/icons/SwapHoriz'
+import SaveAltIcon from '@material-ui/icons/SaveAlt'
+import CancelIcon from '@material-ui/icons/Cancel'
+import SearchIcon from '@material-ui/icons/Search'
+
 import SidePanel from '../components/SidePanel'
 import VideoCard from '../components/VideoCard'
 import Main from '../components/Main'
@@ -155,7 +161,10 @@ export default function SearchWorkspace({
           </Grid>
 
           <div className="button-top-margin">
-            <Button variant="contained" color="secondary" type="submit" fullWidth > Search </Button>
+            <Button variant="contained" color="secondary" type="submit" fullWidth >
+              <SearchIcon className="margin-right" />
+              Search
+            </Button>
           </div>
         </form>
 
@@ -168,10 +177,16 @@ export default function SearchWorkspace({
         <div className="button-top-margin">
           <Grid container spacing={16}>
             <Grid item>
-              <Button variant="contained" color="secondary" onClick={onSelectAll}> Select All </Button>
+              <Button variant="contained" color="secondary" onClick={onSelectAll}>
+                <SelectAllIcon className="right-margin" />
+                Select All
+              </Button>
             </Grid>
             <Grid item>
-              <Button variant="contained" color="secondary" onClick={onInvertSelection}> Invert Selection </Button>
+              <Button variant="contained" color="secondary" onClick={onInvertSelection}>
+                <SwapHorizIcon className="right-margin" />
+                Invert Selection
+              </Button>
             </Grid>
           </Grid>
         </div>
@@ -193,6 +208,7 @@ export default function SearchWorkspace({
                 <VideoCard
                   videoData={candidateVideo}
                   onClick={() => onCardClick(candidateVideo.youtubeData.id)}
+                  isDisabled={candidateVideo.downloadState !== 'none'}
                 />
               </GridListTile>
             )}
@@ -208,10 +224,16 @@ export default function SearchWorkspace({
 
             <Grid container spacing={16}>
               <Grid item>
-                <Button variant="contained" color="secondary" onClick={onClickDownloadSelectedVideos} > Download Selected Videos </Button>
+                <Button variant="contained" color="secondary" onClick={onClickDownloadSelectedVideos} >
+                  <SaveAltIcon className="margin-right" />
+                  Download Selected Videos
+                </Button>
               </Grid>
               <Grid item>
-                <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} > Cancel All Downloads </Button>
+                <Button variant="contained" color="secondary" onClick={onClickCancelDownloads} >
+                  <CancelIcon className="margin-right" />
+                  Cancel All Downloads
+                </Button>
               </Grid>
             </Grid>
 
@@ -231,6 +253,7 @@ export default function SearchWorkspace({
                   <VideoCard
                     videoData={video}
                     onClick={() => { }}
+                    isDisabled={true}
                   />
                 </div>
               )

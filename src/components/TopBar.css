@@ -10,3 +10,11 @@
 .TopBar .title {
   margin-left: 1em;
 }
+
+.app-bar {
+  background-color: #333 !important;
+}
+
+.margin-right {
+  margin-right: 0.5em;
+}

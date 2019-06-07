@@ -8,6 +8,7 @@ import {
 } from '@material-ui/core'
 
 import AddCircleIcon from '@material-ui/icons/AddCircle'
+import FolderIcon from '@material-ui/icons/Folder'
 
 const { dialog } = require('electron').remote
 
@@ -116,10 +117,13 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
           </FormControl>
 
           <FormControl margin="normal" fullWidth>
-            <div>
-              <Typography variant="body1" gutterBottom>Current folder:</Typography>
+            <Button variant="contained" color="secondary" onClick={onClickFolder} fullWidth>
+              <FolderIcon className="margin-right" />
+              Select an empty folder
+            </Button>
+            <div className="folder-path">
+              <Typography variant="body1" gutterBottom >Current folder:</Typography>
               <Typography variant="body1" gutterBottom color="secondary">{projectPath}</Typography>
-              <Button variant="contained" onClick={onClickFolder}>Select an empty folder</Button>
             </div>
           </FormControl>
         </DialogContent>

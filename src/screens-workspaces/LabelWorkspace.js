@@ -1,11 +1,12 @@
 import './LabelWorkspace.css'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 
 import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField, Paper, Grid } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
 import DeleteIcon from '@material-ui/icons/Delete'
+import SaveAltIcon from '@material-ui/icons/SaveAlt'
 
 import SidePanel from '../components/SidePanel'
 import Main from '../components/Main'
@@ -33,7 +34,9 @@ export default function LabelWorkspace({
 
   // When current video is changed scroll to view
   useEffect(() => {
-    document.getElementById(currentVideoId).scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
+    if (currentVideoId) {
+      document.getElementById('dv' + currentVideoId).scrollIntoView(true) //{ behavior: "smooth", block: "end", inline: "nearest" }
+    }
   }, [currentVideoId])
 
   // Labels for current video
@@ -61,8 +64,7 @@ export default function LabelWorkspace({
   const deleteLastOpenLabel = useCallback(
     () => {
       setOpenLabels(previous => previous.filter((label, i) => i > 0))
-    },
-    []
+    }, []
   )
 
   const onLabelClick = useCallback(
@@ -70,8 +72,7 @@ export default function LabelWorkspace({
       if (isOneLabelMode) {
         onAssignLabel(currentVideoId, { id: Date.now(), labelName: name, inTime: 0, outTime: currentVideoDuration })
       } else {
-        const openLabelIndex = openLabels
-          .findIndex(label => (label.labelName === name && label.outTime === undefined))
+        const openLabelIndex = openLabels.findIndex(label => (label.labelName === name && label.outTime === undefined))
 
         const hasOpenLabel = openLabelIndex !== -1
         if (hasOpenLabel) {
@@ -100,8 +101,7 @@ export default function LabelWorkspace({
 
         }
       }
-    },
-    [currentVideoId, onAssignLabel, openLabels, currentVideoTime, isOneLabelMode, currentVideoDuration],
+    }, [currentVideoId, onAssignLabel, openLabels, isOneLabelMode, currentVideoDuration, currentVideoTime]
   )
 
   function deleteAssignedLabel(labelId) {
@@ -134,15 +134,20 @@ export default function LabelWorkspace({
   )
 
   // Callback to delete video and load next if playing
-  function onClickDeleteVideo(videoId) {
-    onDeleteVideo(videoId)
+  const onClickDeleteVideo = useCallback(
+    (videoId) => {
+      onDeleteVideo(videoId)
 
-    if (currentVideoId === videoId) {
-      loadNextVideo()
+      if (currentVideoId === videoId) {
+        loadNextVideo()
+      }
     }
-  }
+    , [onDeleteVideo, currentVideoId, loadNextVideo])
 
-  const isVideoDone = (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
+  const isVideoDone = useCallback(
+    (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
+    , [assignedVideoLabels])
+
   const isLabelOpen = (labelName) => (openLabels.findIndex(label => label.labelName === labelName) !== -1)
 
   useEffect(() => {
@@ -151,53 +156,58 @@ export default function LabelWorkspace({
       Mousetrap.bind((i + 1).toString(), () => onLabelClick(label))
     })
 
-    Mousetrap.bind(['ctrl+d', 'command+d'], () => onLabelsFinish())
-
-    Mousetrap.bind(['ctrl+x', 'command+x'], () => deleteLastOpenLabel())
-
     return () => {
       firstNineLabels.forEach((label, i) => {
         Mousetrap.unbind((i + 1).toString())
       })
+    }
+  }, [onLabelClick, projectLabels])
 
+  useEffect(() => {
+    Mousetrap.bind(['ctrl+d', 'command+d'], () => onLabelsFinish())
+    Mousetrap.bind(['ctrl+x', 'command+x'], () => deleteLastOpenLabel())
+
+    return () => {
       Mousetrap.unbind(['ctrl+d', 'command+d'])
-
       Mousetrap.unbind(['ctrl+x', 'command+x'])
     }
-  }, [projectLabels, onLabelClick, onLabelsFinish, deleteLastOpenLabel])
+  }, [onLabelsFinish, deleteLastOpenLabel])
 
   const [extractFps, setExtractFps] = useState(1)
   const [extractNum, setExtractNum] = useState(10)
+
+  // Memoized downloaded videos list to optimize use
+  const downloadedVideoCards = useMemo(
+    () => downloadedVideosData.map(loadedVideoData =>
+      <div
+        id={'dv' + loadedVideoData.youtubeData.id}
+        className="bottom-margin"
+        key={loadedVideoData.youtubeData.id}
+      >
+        <VideoCard
+          videoData={loadedVideoData}
+          isLabeled={isVideoDone(loadedVideoData.youtubeData.id)}
+          onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
+        />
+
+        <Button
+          variant="contained" color="secondary"
+          onClick={() => onClickDeleteVideo(loadedVideoData.youtubeData.id)}
+          fullWidth
+        >
+          <DeleteIcon className="margin-right" />
+          Delete
+      </Button>
+      </div>
+    )
+    , [downloadedVideosData, isVideoDone, onClickDeleteVideo])
 
   return (
     <div className="LabelWorkspace">
       <SidePanel>
         <Typography variant="h5" component="h2" gutterBottom> Downloaded videos </Typography>
 
-        {
-          downloadedVideosData.map(loadedVideoData =>
-            <div
-              id={loadedVideoData.youtubeData.id}
-              className="bottom-margin"
-              key={loadedVideoData.youtubeData.id}
-            >
-              <VideoCard
-                videoData={loadedVideoData}
-                isLabeled={isVideoDone(loadedVideoData.youtubeData.id)}
-                onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
-              />
-
-              <Button
-                variant="contained" color="secondary"
-                onClick={() => onClickDeleteVideo(loadedVideoData.youtubeData.id)}
-                fullWidth
-              >
-                <DeleteIcon />
-                Delete
-              </Button>
-            </div>
-          )
-        }
+        {downloadedVideoCards}
       </SidePanel>
 
       <Main>
@@ -259,6 +269,7 @@ export default function LabelWorkspace({
               onClick={onLabelsFinish}
               fullWidth
             >
+              <CheckIcon className="margin-right" />
               Finished
             </Button>
           </div>
@@ -282,8 +293,11 @@ export default function LabelWorkspace({
         </div>
 
         <Typography variant="h5" component="h2" gutterBottom> Labels </Typography>
-        <Typography variant="body1" gutterBottom> Export Assigned Labels. </Typography>
-        <Button variant="contained" color="secondary" onClick={onClickExportLabels} > Export </Button>
+        <Typography variant="body1" gutterBottom> Export Assigned Labels in JSON format. </Typography>
+        <Button variant="contained" color="secondary" onClick={onClickExportLabels} >
+          <SaveAltIcon className="margin-right" />
+          Export
+        </Button>
 
         <div className="side-panel-divider">
           <Divider variant="fullWidth" />

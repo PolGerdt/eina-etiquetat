@@ -83,7 +83,7 @@ export default function VideoScroller({ videoSrc, onVideoTimeChange, onVideoDura
       <video
         ref={videoEl}
         src={videoSrc}
-        preload="auto"
+        preload="metadata"
         onDurationChange={onDurationChange}
       />
 

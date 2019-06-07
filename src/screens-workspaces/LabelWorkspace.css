@@ -15,8 +15,8 @@
 
 .main-label .labels-list {
   padding: 1em 2em;
+  /* Correct scrollbar -17px */
   padding-right: calc(2em - 17px);
-  /* Correct scrollbar */
   position: relative;
 }
 
@@ -46,4 +46,8 @@
 
 .label-chip {
   margin: 0 0.5em 0.5em 0;
+}
+
+.margin-right {
+  margin-right: 0.5em;
 }

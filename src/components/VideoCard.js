@@ -13,7 +13,7 @@ const selectedStyle = {
 
 const entities = require("entities")
 
-export default function VideoCard({ videoData, onClick, isLabeled }) {
+export default function VideoCard({ videoData, onClick, isLabeled, isDisabled }) {
 
   const { youtubeData, downloadState, downloadPercent, isSelected } = videoData
 
@@ -27,11 +27,13 @@ export default function VideoCard({ videoData, onClick, isLabeled }) {
 
   return (
     <div className="VideoCard" >
-      <div className="overlay" style={isSelected ? selectedStyle : null}></div>
-      <Card square>
+      <div className="overlay" style={(isSelected || downloadState !== 'none') ? selectedStyle : null}></div>
+      <Card
+        square
+      >
         <div className="card-icon-right"> {rightIcon} </div>
 
-        <CardActionArea onClick={onClick}>
+        <CardActionArea onClick={onClick} disabled={isDisabled}>
           <CardMedia
             draggable="false"
             component="img"

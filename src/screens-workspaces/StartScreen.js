@@ -4,7 +4,7 @@ import React from 'react'
 
 import { Grid, Fab } from '@material-ui/core'
 import NoteAddIcon from '@material-ui/icons/NoteAdd'
-import FolderOpenIcon from '@material-ui/icons/FolderOpen'
+import FolderIcon from '@material-ui/icons/Folder'
 
 export default function StartScreen({ onClickNew, onClickOpen }) {
 
@@ -20,7 +20,7 @@ export default function StartScreen({ onClickNew, onClickOpen }) {
 
         <Grid item>
           <Fab variant="extended" color="secondary" onClick={onClickOpen}>
-            <FolderOpenIcon fontSize="large" className="start-button" />
+            <FolderIcon fontSize="large" className="start-button" />
             Open Project
           </Fab>
         </Grid>

@@ -87,6 +87,12 @@ export default function ShortcutsDialog({ isOpen, onClose }) {
                     </ListItem>
                     <ListItem>
                       <ListItemText
+                        primary="Cancel open label"
+                        secondary="Ctrl/Command + x"
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
                         primary="Finish video labels"
                         secondary="Ctrl/Command + d"
                       />
