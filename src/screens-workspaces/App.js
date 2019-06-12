@@ -123,6 +123,7 @@ export default function App() {
     fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_full'))
     fs.mkdirSync(path.join(projectConfig.projectPath, 'video_segments'))
     fs.mkdirSync(path.join(projectConfig.projectPath, 'extracted_frames'))
+    fs.mkdirSync(path.join(projectConfig.projectPath, 'videos_full', 'thumbnails'))
 
     projectDataDb = new JsonDB(path.join(projectConfig.projectPath, 'projectData.json'), true, false)
     projectDataDb.push('/config', { name: projectConfig.projectName, labels: projectConfig.projectLabels })

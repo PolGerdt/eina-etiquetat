@@ -13,7 +13,7 @@ const selectedStyle = {
 
 const entities = require("entities")
 
-export default function VideoCard({ videoData, onClick, isLabeled, isDisabled }) {
+export default function VideoCard({ videoData, onClick, isLabeled, isDisabled, thumbnailPath }) {
 
   const { youtubeData, downloadState, downloadPercent, isSelected } = videoData
 
@@ -38,7 +38,7 @@ export default function VideoCard({ videoData, onClick, isLabeled, isDisabled })
             draggable="false"
             component="img"
             width={youtubeData.thumbnails.medium.width}
-            image={youtubeData.thumbnails.medium.url}
+            image={thumbnailPath || youtubeData.thumbnails.medium.url}
           />
 
           <CardContent>

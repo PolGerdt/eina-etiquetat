@@ -13,7 +13,7 @@ import SearchIcon from '@material-ui/icons/Search'
 
 import SidePanel from '../components/SidePanel'
 import VideoCard from '../components/VideoCard'
-import Main from '../components/Main'
+import MainPanel from '../components/MainPanel'
 
 const Mousetrap = require('mousetrap')
 
@@ -193,7 +193,7 @@ export default function SearchWorkspace({
 
       </SidePanel>
 
-      <Main>
+      <MainPanel>
         <div className="slider-container">
           <Slider
             value={numCols}
@@ -214,7 +214,7 @@ export default function SearchWorkspace({
             )}
           </GridList>
         </div>
-      </Main>
+      </MainPanel>
 
 
       <SidePanel>

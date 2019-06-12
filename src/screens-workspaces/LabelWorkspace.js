@@ -9,7 +9,7 @@ import DeleteIcon from '@material-ui/icons/Delete'
 import SaveAltIcon from '@material-ui/icons/SaveAlt'
 
 import SidePanel from '../components/SidePanel'
-import Main from '../components/Main'
+import MainPanel from '../components/MainPanel'
 import VideoScroller from '../components/VideoScroller'
 import VideoCard from '../components/VideoCard'
 import TimeLabel from '../components/TimeLabel'
@@ -17,7 +17,7 @@ import TimeLabel from '../components/TimeLabel'
 const Mousetrap = require('mousetrap')
 
 export default function LabelWorkspace({
-  downloadedVideosData, videoUrls,
+  downloadedVideosData, videoUrls, thumbnailUrls,
   assignedVideoLabels,
   projectLabels,
   isOneLabelMode,
@@ -178,29 +178,35 @@ export default function LabelWorkspace({
 
   // Memoized downloaded videos list to optimize use
   const downloadedVideoCards = useMemo(
-    () => downloadedVideosData.map(loadedVideoData =>
-      <div
-        id={'dv' + loadedVideoData.youtubeData.id}
-        className="bottom-margin"
-        key={loadedVideoData.youtubeData.id}
-      >
-        <VideoCard
-          videoData={loadedVideoData}
-          isLabeled={isVideoDone(loadedVideoData.youtubeData.id)}
-          onClick={() => setCurrentVideoId(loadedVideoData.youtubeData.id)}
-        />
+    () => {
+      return downloadedVideosData.map(loadedVideoData => {
+        const videoId = loadedVideoData.youtubeData.id
 
-        <Button
-          variant="contained" color="secondary"
-          onClick={() => onClickDeleteVideo(loadedVideoData.youtubeData.id)}
-          fullWidth
-        >
-          <DeleteIcon className="margin-right" />
-          Delete
-      </Button>
-      </div>
-    )
-    , [downloadedVideosData, isVideoDone, onClickDeleteVideo])
+        return (
+          <div
+            id={'dv' + videoId}
+            className="bottom-margin"
+            key={videoId}
+          >
+            <VideoCard
+              videoData={loadedVideoData}
+              isLabeled={isVideoDone(videoId)}
+              onClick={() => setCurrentVideoId(videoId)}
+              thumbnailPath={thumbnailUrls[videoId]}
+            />
+
+            <Button
+              variant="contained" color="secondary"
+              onClick={() => onClickDeleteVideo(videoId)}
+              fullWidth
+            >
+              <DeleteIcon className="margin-right" />
+              Delete
+            </Button>
+          </div>
+        )
+      })
+    }, [downloadedVideosData, isVideoDone, onClickDeleteVideo, thumbnailUrls])
 
   return (
     <div className="LabelWorkspace">
@@ -210,7 +216,7 @@ export default function LabelWorkspace({
         {downloadedVideoCards}
       </SidePanel>
 
-      <Main>
+      <MainPanel>
         <div className="main-label">
           <Paper className="fixed-top">
             <VideoScroller
@@ -276,7 +282,7 @@ export default function LabelWorkspace({
 
 
         </div>
-      </Main>
+      </MainPanel>
 
       <SidePanel>
         <Typography variant="h5" component="h2" gutterBottom> Label mode </Typography>
