@@ -19,6 +19,8 @@ const Mousetrap = require('mousetrap')
 
 // Search videos to get candidates and filter them
 export default function SearchWorkspace({
+  searchParams,
+  onSetTextInput, onSetMaxResults, onSetOrder, onSetVideoDuration, onSetVideoLicense,
   videos, requestedVideos,
   numCols,
   onSelectAll, onInvertSelection, onCardClick,
@@ -27,39 +29,20 @@ export default function SearchWorkspace({
   onClickDownloadSelectedVideos, onClickCancelDownloads
 }) {
 
-  const [textInput, setTextInput] = useState('')
-  const [maxResults, setMaxResults] = useState(10)
-  const [order, setOrder] = useState('relevance')
-  const [videoDuration, setVideoDuration] = useState('short')
-  const [videoLicense, setVideoLicense] = useState('any')
-
   /*
-  {
-    text,
-    options: {
-      maxResults,
-      order,
-      videoDuration,
-      videoLicense,
-      ...
+  searchParams: {
+    textInput,
+    maxResults,
+    order,
+    videoDuration,
+    videoLicense,
     }
   }
   */
 
-  function handleSubmit(e) {
+  function onSubmitForm(e) {
     e.preventDefault()
-
-    let query = {
-      text: textInput,
-      options: {
-        maxResults,
-        order,
-        videoDuration,
-        videoLicense
-      }
-    }
-
-    onSubmitSearch(query)
+    onSubmitSearch()
   }
 
   const [numVideosSelected, setNumVideosSelected] = useState(0)
@@ -82,13 +65,14 @@ export default function SearchWorkspace({
     <div className="SearchWorkspace">
       <SidePanel>
         <Typography variant="h5" component="h2"> Search </Typography>
-        <form onSubmit={handleSubmit}>
+
+        <form onSubmit={onSubmitForm}>
           <TextField
             autoFocus
             label="Search query"
-            value={textInput}
+            value={searchParams.textInput}
             type="search"
-            onChange={e => setTextInput(e.target.value)}
+            onChange={e => onSetTextInput(e.target.value)}
             margin="normal"
             variant="outlined"
             fullWidth
@@ -96,13 +80,12 @@ export default function SearchWorkspace({
 
           <Grid container spacing={16}>
             <Grid item>
-
               <TextField
                 label="Max results"
                 type="number"
                 min="0"
-                defaultValue="10"
-                onChange={e => setMaxResults(e.target.value)}
+                value={searchParams.maxResults}
+                onChange={e => onSetMaxResults(e.target.value)}
                 margin="normal"
                 variant="outlined"
               />
@@ -112,8 +95,8 @@ export default function SearchWorkspace({
               <TextField
                 select
                 label="Order by"
-                value={order}
-                onChange={e => setOrder(e.target.value)}
+                value={searchParams.order}
+                onChange={e => onSetOrder(e.target.value)}
                 margin="normal"
                 variant="outlined"
               >
@@ -132,8 +115,8 @@ export default function SearchWorkspace({
               <TextField
                 select
                 label="Video duration"
-                value={videoDuration}
-                onChange={e => setVideoDuration(e.target.value)}
+                value={searchParams.videoDuration}
+                onChange={e => onSetVideoDuration(e.target.value)}
                 margin="normal"
                 variant="outlined"
               >
@@ -148,8 +131,8 @@ export default function SearchWorkspace({
               <TextField
                 select
                 label="Video license"
-                value={videoLicense}
-                onChange={(e) => setVideoLicense(e.target.value)}
+                value={searchParams.videoLicense}
+                onChange={(e) => onSetVideoLicense(e.target.value)}
                 margin="normal"
                 variant="outlined"
               >
@@ -161,7 +144,7 @@ export default function SearchWorkspace({
           </Grid>
 
           <div className="button-top-margin">
-            <Button variant="contained" color="secondary" type="submit" fullWidth >
+            <Button variant="contained" color="secondary" type="submit" fullWidth>
               <SearchIcon className="margin-right" />
               Search
             </Button>

@@ -35,7 +35,8 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
   }
 
   const [projectLabels, setProjectLabels] = useState([])
-  function onClickAddLabel() {
+  function onSubmitFormLabel(e) {
+    e.preventDefault()
     setProjectLabels(previous => [...previous, currentLabel])
     setCurrentLabel('')
   }
@@ -88,23 +89,24 @@ export default function EditProjectDialog({ isOpen, onClose, previousInfo }) {
             onChange={onChangeProjectName}
             variant="outlined"
           />
-
-          <FormControl margin="normal" fullWidth>
-            <InputLabel htmlFor="label">Label</InputLabel>
-            <Input
-              id="label"
-              value={currentLabel}
-              type="text"
-              onChange={onChangeLabel}
-              endAdornment={
-                <InputAdornment position="end">
-                  <IconButton onClick={onClickAddLabel} color="secondary">
-                    <AddCircleIcon />
-                  </IconButton>
-                </InputAdornment>
-              }
-            />
-          </FormControl>
+          <form onSubmit={onSubmitFormLabel}>
+            <FormControl margin="normal" fullWidth>
+              <InputLabel htmlFor="label">Label</InputLabel>
+              <Input
+                id="label"
+                value={currentLabel}
+                type="text"
+                onChange={onChangeLabel}
+                endAdornment={
+                  <InputAdornment position="end">
+                    <IconButton color="secondary" type="submit">
+                      <AddCircleIcon />
+                    </IconButton>
+                  </InputAdornment>
+                }
+              />
+            </FormControl>
+          </form>
 
           <FormControl margin="normal" fullWidth>
             <div>

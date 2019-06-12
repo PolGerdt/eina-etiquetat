@@ -80,8 +80,15 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setIsSnackbarOpen(false)
   }
 
+  // Search params
+  const [textInput, setTextInput] = useState('')
+  const [maxResults, setMaxResults] = useState(10)
+  const [order, setOrder] = useState('relevance')
+  const [videoDuration, setVideoDuration] = useState('short')
+  const [videoLicense, setVideoLicense] = useState('any')
+
   // Get videos from youtube with options and check if videos are already requested or downloaded
-  function searchVideos(query) {
+  function searchVideos() {
     if (!youtubeApiKey) {
       displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
       return
@@ -89,13 +96,14 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
     var opts = {
       key: youtubeApiKey,
-      maxResults: 10,
       type: 'video',
-      videoDuration: 'short',
-      ...query.options
+      maxResults,
+      order,
+      videoDuration,
+      videoLicense
     }
 
-    youtubeSearch(query.text, opts, function (err, youtubeResults) {
+    youtubeSearch(textInput, opts, function (err, youtubeResults) {
       if (!err) {
         let searchCandidateVideos = youtubeResults.map(result => {
           const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id)
@@ -131,8 +139,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   function toggleVideoSelection(videoId) {
     setCandidateVideos(previousVideos =>
       previousVideos.map(video => (video.youtubeData.id === videoId) ?
-        { ...video, isSelected: !video.isSelected, } :
-        video
+        { ...video, isSelected: !video.isSelected, } : video
       )
     )
   }
@@ -598,6 +605,9 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
       case 0:
         return (
           <SearchWorkspace
+            searchParams={{ textInput, maxResults, order, videoDuration, videoLicense }}
+            onSetTextInput={setTextInput} onSetMaxResults={setMaxResults} onSetOrder={setOrder}
+            onSetVideoDuration={setVideoDuration} onSetVideoLicense={setVideoLicense}
             videos={candidateVideos}
             numCols={numCols}
             requestedVideos={requestedVideos}
