@@ -38,7 +38,19 @@ export default function ShortcutsDialog({ isOpen, onClose }) {
                     <ListItem>
                       <ListItemText
                         primary="Invert selection for all videos"
-                        secondary="Ctrl/Command + i"
+                        secondary="Ctrl/Command + d"
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="Search previous page of youtube results"
+                        secondary="Ctrl/Command + Left Arrow"
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="Search next page of youtube results"
+                        secondary="Ctrl/Command + Right Arrow"
                       />
                     </ListItem>
                   </List>

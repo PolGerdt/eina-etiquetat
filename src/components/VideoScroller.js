@@ -7,7 +7,7 @@ import Slider from '@material-ui/lab/Slider'
 import ChevronRightIcon from '@material-ui/icons/ChevronRight'
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft'
 
-const Mousetrap = require('mousetrap');
+const Mousetrap = require('mousetrap')
 
 const framePeriod = 1 / 30
 

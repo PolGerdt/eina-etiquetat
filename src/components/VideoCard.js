@@ -20,16 +20,16 @@ export default function VideoCard({ videoData, onClick, isDisabled, thumbnailPat
   switch (iconType) {
     case 'selected':
       topRightIcon = <CheckCircleIcon color="secondary" fontSize="large" />
-      break;
+      break
     case 'downloaded':
       topRightIcon = <SaveAltIcon color="secondary" fontSize="large" />
-      break;
+      break
     case 'done':
       topRightIcon = <TurnedInIcon color="secondary" fontSize="large" />
-      break;
+      break
     case 'playing':
       topRightIcon = <PlayCircleFilledIcon color="secondary" fontSize="large" />
-      break;
+      break
 
   }
 
@@ -46,8 +46,8 @@ export default function VideoCard({ videoData, onClick, isDisabled, thumbnailPat
           <CardMedia
             draggable="false"
             component="img"
-            width={youtubeData.thumbnails.medium.width}
-            image={thumbnailPath || youtubeData.thumbnails.medium.url}
+            width={youtubeData.mediumThumbnail.width}
+            image={thumbnailPath || youtubeData.mediumThumbnail.url}
           />
 
           <CardContent>

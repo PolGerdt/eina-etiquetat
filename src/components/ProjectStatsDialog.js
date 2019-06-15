@@ -9,8 +9,8 @@ export default function ProjectStatsDialog({ onClose, isOpen, downloadedVideos, 
   const numDownloadedVideos = downloadedVideos.length
 
   // Create object with label names as keys and its total count 
-  const numLabelsByName = useMemo(() =>
-    assignedLabels.reduce((acum, videoLabels) => {
+  const numLabelsByName = useMemo(() => {
+    return assignedLabels.reduce((acum, videoLabels) => {
       let newAcum = { ...acum }
 
       videoLabels.labels.forEach(label => {
@@ -22,7 +22,7 @@ export default function ProjectStatsDialog({ onClose, isOpen, downloadedVideos, 
       })
       return newAcum
     }, {})
-    , [assignedLabels]);
+  }, [assignedLabels])
 
   return (
     <div className="ProjectStatsDialog">

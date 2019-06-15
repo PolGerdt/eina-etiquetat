@@ -9,19 +9,20 @@ import SearchWorkspace from './SearchWorkspace'
 import LabelWorkspace from './LabelWorkspace'
 import ProjectStatsDialog from '../components/ProjectStatsDialog'
 
-import youtubeSearch from 'youtube-search'
 import JsonDB from 'node-json-db'
 
 const { dialog } = require('electron').remote
 const path = require('path')
 const fs = require('fs')
 
+const YouTube = require('youtube-node')
 const ytdl = require('ytdl-core')
 
 const imgDownload = require('image-downloader')
 
 const { spawn } = require('child_process')
 
+const youTube = new YouTube()
 let projectDataDb = null
 
 function useProjectDataFieldDb(projectPath, field, defaultState) {
@@ -54,7 +55,15 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   /*
   [
     {
-      youtubeData: {},
+      youtubeData: {
+        id,
+        title,
+        mediumThumbnail: {
+          url,
+          width,
+          height
+        }
+      },
       downloadState: downloaded, // none / downloading / downloaded
       downloadPercent: 100,
       isSelected: false
@@ -80,6 +89,11 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setIsSnackbarOpen(false)
   }
 
+  // Set api key if changed
+  useEffect(() => {
+    youTube.setKey(youtubeApiKey)
+  }, [youtubeApiKey])
+
   // Search params
   const [textInput, setTextInput] = useState('')
   const [maxResults, setMaxResults] = useState(10)
@@ -87,52 +101,89 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   const [videoDuration, setVideoDuration] = useState('short')
   const [videoLicense, setVideoLicense] = useState('any')
 
+  function scrollToTopResults() {
+    document.getElementById('search-results-top').scrollIntoView(true)
+  }
+
+  const [prevPageToken, setPrevPageToken] = useState('')
+  function getPrevSearchPage() {
+    searchVideosPromise(prevPageToken)
+      .then(scrollToTopResults)
+  }
+
+  const [nextPageToken, setNextPageToken] = useState('')
+  function getNextSearchPage() {
+    searchVideosPromise(nextPageToken)
+      .then(scrollToTopResults)
+  }
+
+  function onSubmitSearch() {
+    searchVideosPromise()
+  }
+
   // Get videos from youtube with options and check if videos are already requested or downloaded
-  function searchVideos() {
-    if (!youtubeApiKey) {
-      displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
-      return
-    }
-
-    var opts = {
-      key: youtubeApiKey,
-      type: 'video',
-      maxResults,
-      order,
-      videoDuration,
-      videoLicense
-    }
-
-    youtubeSearch(textInput, opts, function (err, youtubeResults) {
-      if (!err) {
-        let searchCandidateVideos = youtubeResults.map(result => {
-          const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id)
-
-          if (requestedVideoWithSameId === undefined) {
-            const downloadedVideoWithSameId = downloadedVideosDb.find(video => video.youtubeData.id === result.id)
-
-            if (downloadedVideoWithSameId === undefined) {
-              const newVideo = {
-                youtubeData: result,
-                downloadState: 'none',
-                downloadPercent: 0,
-                isSelected: false
-              }
-
-              return newVideo
-            } else {
-              return downloadedVideoWithSameId
-            }
-          } else {
-            return requestedVideoWithSameId
-          }
-
-        })
-
-        setCandidateVideos(searchCandidateVideos)
-      } else {
-        // Search error
+  function searchVideosPromise(pageToken = '') {
+    return new Promise((resolve, reject) => {
+      if (!youtubeApiKey) {
+        displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
+        reject()
       }
+
+      const params = {
+        term: textInput,
+        maxResults,
+        order,
+        videoDuration,
+        videoLicense,
+        pageToken,
+        key: youtubeApiKey,
+        type: 'video',
+        part: 'snippet'
+      }
+
+      youTube.search(textInput, maxResults, params, function (error, youtubeResults) {
+        if (error) {
+          displayMessageSnackbar('Search error. Check your API key and parameters and try again.')
+        } else {
+
+          // Page tokens
+          setPrevPageToken(youtubeResults.prevPageToken)
+          setNextPageToken(youtubeResults.nextPageToken)
+
+          // Results
+          let searchCandidateVideos = youtubeResults.items.map(result => {
+            const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id.videoId)
+
+            if (requestedVideoWithSameId === undefined) {
+              const downloadedVideoWithSameId = downloadedVideosDb.find(video => video.youtubeData.id === result.id.videoId)
+
+              if (downloadedVideoWithSameId === undefined) {
+                const newVideo = {
+                  youtubeData: {
+                    id: result.id.videoId,
+                    title: result.snippet.title,
+                    mediumThumbnail: result.snippet.thumbnails.medium
+                  },
+                  downloadState: 'none',
+                  downloadPercent: 0,
+                  isSelected: false
+                }
+
+                return newVideo
+              } else {
+                return downloadedVideoWithSameId
+              }
+            } else {
+              return requestedVideoWithSameId
+            }
+
+          })
+
+          setCandidateVideos(searchCandidateVideos)
+
+          resolve()
+        }
+      })
     })
   }
 
@@ -252,7 +303,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
     // Save video thumbnail
     const opts = {
-      url: videoData.youtubeData.thumbnails.medium.url,
+      url: videoData.youtubeData.mediumThumbnail.url,
       dest: getVideoThumbnailPathFromId(videoId)
     }
     imgDownload.image(opts).catch((err) => {
@@ -318,7 +369,9 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   [
     {
       videoId: '',
-      labels: [{id, labelName, inTime, outTime}],
+      labels: [
+        {id, labelName, inTime, outTime}
+      ],
       isDone: false
     }
   ]
@@ -608,13 +661,17 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             searchParams={{ textInput, maxResults, order, videoDuration, videoLicense }}
             onSetTextInput={setTextInput} onSetMaxResults={setMaxResults} onSetOrder={setOrder}
             onSetVideoDuration={setVideoDuration} onSetVideoLicense={setVideoLicense}
+            prevPageToken={prevPageToken}
+            nextPageToken={nextPageToken}
+            onClickPrevPage={getPrevSearchPage}
+            onClickNextPage={getNextSearchPage}
             videos={candidateVideos}
             numCols={numCols}
             requestedVideos={requestedVideos}
             onCardClick={toggleVideoSelection}
             onSelectAll={selectAllVideos}
             onInvertSelection={invertSelectionAllVideos}
-            onSubmitSearch={searchVideos}
+            onSubmitSearch={onSubmitSearch}
             onChangeNumCols={onChangeNumCols}
             onClickDownloadSelectedVideos={downloadSelectedVideos}
             onClickCancelDownloads={cancelDownloads}

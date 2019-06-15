@@ -14,14 +14,14 @@ import { AppBar, Toolbar, IconButton, Typography, Tabs, Tab, Menu, MenuItem, Div
 
 export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenuItem }) {
 
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTab, setSelectedTab] = useState(0)
 
   function handleTabChange(event, newValue) {
     setSelectedTab(newValue)
     onChangeScene(newValue)
   }
 
-  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = useState(null)
   function handleClick(event) {
     setAnchorEl(event.currentTarget)
   }

@@ -10,6 +10,8 @@ import SwapHorizIcon from '@material-ui/icons/SwapHoriz'
 import SaveAltIcon from '@material-ui/icons/SaveAlt'
 import CancelIcon from '@material-ui/icons/Cancel'
 import SearchIcon from '@material-ui/icons/Search'
+import NavigateNextIcon from '@material-ui/icons/NavigateNext'
+import NavigateBeforeIcon from '@material-ui/icons/NavigateBefore'
 
 import SidePanel from '../components/SidePanel'
 import VideoCard from '../components/VideoCard'
@@ -21,6 +23,8 @@ const Mousetrap = require('mousetrap')
 export default function SearchWorkspace({
   searchParams,
   onSetTextInput, onSetMaxResults, onSetOrder, onSetVideoDuration, onSetVideoLicense,
+  prevPageToken, nextPageToken,
+  onClickPrevPage, onClickNextPage,
   videos, requestedVideos,
   numCols,
   onSelectAll, onInvertSelection, onCardClick,
@@ -53,13 +57,17 @@ export default function SearchWorkspace({
   // Shortcuts
   useEffect(() => {
     Mousetrap.bind(['command+e', 'ctrl+e'], onSelectAll)
-    Mousetrap.bind(['command+i', 'ctrl+i'], onInvertSelection)
+    Mousetrap.bind(['command+d', 'ctrl+d'], onInvertSelection)
+    Mousetrap.bind(['command+left', 'ctrl+left'], onClickPrevPage)
+    Mousetrap.bind(['command+right', 'ctrl+right'], onClickNextPage)
 
     return () => {
       Mousetrap.unbind(['command+e', 'ctrl+e'])
-      Mousetrap.bind(['command+i', 'ctrl+i'])
+      Mousetrap.bind(['command+d', 'ctrl+d'])
+      Mousetrap.bind(['command+left', 'ctrl+left'])
+      Mousetrap.bind(['command+right', 'ctrl+right'])
     }
-  }, [onSelectAll, onInvertSelection])
+  }, [onSelectAll, onInvertSelection, onClickPrevPage, onClickNextPage])
 
   return (
     <div className="SearchWorkspace">
@@ -84,6 +92,9 @@ export default function SearchWorkspace({
                 label="Max results"
                 type="number"
                 min="0"
+                max="50"
+                error={searchParams.maxResults > 50}
+                helperText={searchParams.maxResults > 50 ? 'Acceptable values are 0 to 50, inclusive.' : null}
                 value={searchParams.maxResults}
                 onChange={e => onSetMaxResults(e.target.value)}
                 margin="normal"
@@ -184,7 +195,12 @@ export default function SearchWorkspace({
             onChange={(e, v) => onChangeNumCols(v)}
           />
         </div>
+
         <div className="search-results">
+
+          {/* Anchor element to scroll to top */}
+          <div id="search-results-top"></div>
+
           <GridList cellHeight={'auto'} cols={numCols} spacing={10}>
             {
               videos.map(candidateVideo => {
@@ -212,6 +228,28 @@ export default function SearchWorkspace({
               })
             }
           </GridList>
+          <div className="page-controls">
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={onClickPrevPage}
+              disabled={!prevPageToken}
+            >
+              <NavigateBeforeIcon className="right-margin" />
+              Previous page
+            </Button>
+
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={onClickNextPage}
+              disabled={!nextPageToken}
+            >
+              <NavigateNextIcon className="right-margin" />
+              Next page
+            </Button>
+
+          </div>
         </div>
       </MainPanel>
 
