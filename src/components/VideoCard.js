@@ -6,32 +6,41 @@ import { Card, CardActionArea, CardMedia, CardContent, Typography, LinearProgres
 
 import CheckCircleIcon from '@material-ui/icons/CheckCircle'
 import TurnedInIcon from '@material-ui/icons/TurnedIn'
-
-const selectedStyle = {
-  backgroundColor: '#000'
-}
+import PlayCircleFilledIcon from '@material-ui/icons/PlayCircleFilled'
+import SaveAltIcon from '@material-ui/icons/SaveAlt'
 
 const entities = require("entities")
 
-export default function VideoCard({ videoData, onClick, isLabeled, isDisabled, thumbnailPath }) {
+export default function VideoCard({ videoData, onClick, isDisabled, thumbnailPath, iconType, showDarkOverlay }) {
 
-  const { youtubeData, downloadState, downloadPercent, isSelected } = videoData
+  const { youtubeData, downloadState, downloadPercent } = videoData
 
-  let rightIcon = null
+  let topRightIcon = null
 
-  if (isLabeled) {
-    rightIcon = <TurnedInIcon color="secondary" fontSize="large" />
-  } else if (isSelected) {
-    rightIcon = <CheckCircleIcon color="secondary" fontSize="large" />
+  switch (iconType) {
+    case 'selected':
+      topRightIcon = <CheckCircleIcon color="secondary" fontSize="large" />
+      break;
+    case 'downloaded':
+      topRightIcon = <SaveAltIcon color="secondary" fontSize="large" />
+      break;
+    case 'done':
+      topRightIcon = <TurnedInIcon color="secondary" fontSize="large" />
+      break;
+    case 'playing':
+      topRightIcon = <PlayCircleFilledIcon color="secondary" fontSize="large" />
+      break;
+
   }
 
   return (
     <div className="VideoCard" >
-      <div className="overlay" style={(isSelected || downloadState !== 'none') ? selectedStyle : null}></div>
+      {showDarkOverlay ? <div className="overlay"></div> : null}
+
       <Card
         square
       >
-        <div className="card-icon-right"> {rightIcon} </div>
+        <div className="card-icon-right"> {topRightIcon} </div>
 
         <CardActionArea onClick={onClick} disabled={isDisabled}>
           <CardMedia

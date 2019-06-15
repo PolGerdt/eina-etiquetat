@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Typography, Button, Chip, Divider, Switch, FormControlLabel, TextField, Paper, Grid } from '@material-ui/core'
 import LabelIcon from '@material-ui/icons/Label'
 import CheckIcon from '@material-ui/icons/Check'
-import DeleteIcon from '@material-ui/icons/Delete'
+import DeleteForeverIcon from '@material-ui/icons/DeleteForever'
 import SaveAltIcon from '@material-ui/icons/SaveAlt'
 
 import SidePanel from '../components/SidePanel'
@@ -182,6 +182,13 @@ export default function LabelWorkspace({
       return downloadedVideosData.map(loadedVideoData => {
         const videoId = loadedVideoData.youtubeData.id
 
+        let icon = 'none'
+        if (videoId === currentVideoId) {
+          icon = 'playing'
+        } else if (isVideoDone(videoId)) {
+          icon = 'done'
+        }
+
         return (
           <div
             id={'dv' + videoId}
@@ -190,9 +197,10 @@ export default function LabelWorkspace({
           >
             <VideoCard
               videoData={loadedVideoData}
-              isLabeled={isVideoDone(videoId)}
               onClick={() => setCurrentVideoId(videoId)}
               thumbnailPath={thumbnailUrls[videoId]}
+              iconType={icon}
+              showDarkOverlay={icon !== null}
             />
 
             <Button
@@ -200,13 +208,13 @@ export default function LabelWorkspace({
               onClick={() => onClickDeleteVideo(videoId)}
               fullWidth
             >
-              <DeleteIcon className="margin-right" />
+              <DeleteForeverIcon className="margin-right" />
               Delete
             </Button>
           </div>
         )
       })
-    }, [downloadedVideosData, isVideoDone, onClickDeleteVideo, thumbnailUrls])
+    }, [downloadedVideosData, isVideoDone, onClickDeleteVideo, thumbnailUrls, currentVideoId])
 
   return (
     <div className="LabelWorkspace">
@@ -232,7 +240,7 @@ export default function LabelWorkspace({
                     className="label-chip"
                     key={i}
                     icon={isLabelOpen(labelName) ? <CheckIcon /> : <LabelIcon />}
-                    color={isLabelOpen(labelName) ? 'secondary' : 'default'}
+                    color={(isLabelOpen(labelName) || isOneLabelMode) ? 'secondary' : 'default'}
                     label={`${labelName} [${i + 1}]`}
                     onClick={() => onLabelClick(labelName)}
                   />

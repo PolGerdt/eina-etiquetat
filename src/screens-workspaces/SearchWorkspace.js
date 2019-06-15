@@ -186,15 +186,31 @@ export default function SearchWorkspace({
         </div>
         <div className="search-results">
           <GridList cellHeight={'auto'} cols={numCols} spacing={10}>
-            {videos.map(candidateVideo =>
-              <GridListTile key={candidateVideo.youtubeData.id} className="grid-tile">
-                <VideoCard
-                  videoData={candidateVideo}
-                  onClick={() => onCardClick(candidateVideo.youtubeData.id)}
-                  isDisabled={candidateVideo.downloadState !== 'none'}
-                />
-              </GridListTile>
-            )}
+            {
+              videos.map(candidateVideo => {
+                const isDisabled = candidateVideo.downloadState !== 'none'
+
+                let icon = 'none'
+
+                if (candidateVideo.downloadState === 'downloaded') {
+                  icon = 'downloaded'
+                } else if (candidateVideo.isSelected) {
+                  icon = 'selected'
+                }
+
+                return (
+                  <GridListTile key={candidateVideo.youtubeData.id} className="grid-tile">
+                    <VideoCard
+                      videoData={candidateVideo}
+                      onClick={() => onCardClick(candidateVideo.youtubeData.id)}
+                      isDisabled={isDisabled}
+                      iconType={icon}
+                      showDarkOverlay={isDisabled || candidateVideo.isSelected}
+                    />
+                  </GridListTile>
+                )
+              })
+            }
           </GridList>
         </div>
       </MainPanel>
@@ -237,6 +253,7 @@ export default function SearchWorkspace({
                     videoData={video}
                     onClick={() => { }}
                     isDisabled={true}
+                    showDarkOverlay={true}
                   />
                 </div>
               )
