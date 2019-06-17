@@ -164,11 +164,11 @@ export default function LabelWorkspace({
   }, [onLabelClick, projectLabels])
 
   useEffect(() => {
-    Mousetrap.bind(['ctrl+d', 'command+d'], () => onLabelsFinish())
+    Mousetrap.bind(['ctrl+f', 'command+f'], () => onLabelsFinish())
     Mousetrap.bind(['ctrl+x', 'command+x'], () => deleteLastOpenLabel())
 
     return () => {
-      Mousetrap.unbind(['ctrl+d', 'command+d'])
+      Mousetrap.unbind(['ctrl+f', 'command+f'])
       Mousetrap.unbind(['ctrl+x', 'command+x'])
     }
   }, [onLabelsFinish, deleteLastOpenLabel])
@@ -287,7 +287,6 @@ export default function LabelWorkspace({
               Finished
             </Button>
           </div>
-
 
         </div>
       </MainPanel>

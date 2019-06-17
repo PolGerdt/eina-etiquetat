@@ -6,12 +6,12 @@
   height: 100vh;
 }
 
-.card-icon-container {
+.StartScreen .card-icon-container {
   display: flex;
   justify-content: center;
   padding: 1em 0;
 }
 
-.start-button {
+.StartScreen .start-button {
   margin-right: 0.5em;
 }

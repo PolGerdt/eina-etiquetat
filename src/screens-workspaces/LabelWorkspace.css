@@ -9,45 +9,45 @@
   height: calc(100vh - 64px);
 }
 
-.main-label .choose-label-list {
+.LabelWorkspace .main-label .choose-label-list {
   padding-top: 0.5em;
 }
 
-.main-label .labels-list {
-  padding: 1em 2em;
+.LabelWorkspace .main-label .labels-list {
   /* Correct scrollbar -17px */
+  padding: 1em 2em;
   padding-right: calc(2em - 17px);
   position: relative;
 }
 
-.main-label .fixed-top {
+.LabelWorkspace .main-label .fixed-top {
   padding: 2em;
 }
 
-.main-label .scroll-bottom {
+.LabelWorkspace .main-label .scroll-bottom {
   overflow-y: scroll;
 }
 
-.main-label .finish-btn {
+.LabelWorkspace .main-label .finish-btn {
   padding: 0.3em 2em;
 }
 
-.side-panel-divider {
+.LabelWorkspace .side-panel-divider {
   padding: 2em 0;
 }
 
-.vertical-space {
+.LabelWorkspace .vertical-space {
   margin: 2em 0;
 }
 
-.bottom-margin {
+.LabelWorkspace .bottom-margin {
   margin-bottom: 2em;
 }
 
-.label-chip {
+.LabelWorkspace .label-chip {
   margin: 0 0.5em 0.5em 0;
 }
 
-.margin-right {
+.LabelWorkspace .margin-right {
   margin-right: 0.5em;
 }

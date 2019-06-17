@@ -105,30 +105,88 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     document.getElementById('search-results-top').scrollIntoView(true)
   }
 
+  const [isSearching, setIsSearching] = useState(false)
+
+  // Search videos with a page token and set isSearching status
+  function searchVideos(pageToken) {
+    if (!youtubeApiKey) {
+      displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
+      return
+    }
+
+    setIsSearching(true)
+
+    searchVideosWithPageToken(pageToken)
+      .then((youtubeResults) => {
+        const checkedVideos = checkYoutubeResultVideos(youtubeResults.items)
+
+        // Set results
+        setPrevPageToken(youtubeResults.prevPageToken)
+        setNextPageToken(youtubeResults.nextPageToken)
+        setCandidateVideos(checkedVideos)
+
+        // Set display and state
+        setIsSearching(false)
+        scrollToTopResults()
+      }, () => {
+        setIsSearching(false)
+        displayMessageSnackbar('Search error. Check your API key and parameters and try again.')
+      }).catch((err) => {
+        setIsSearching(false)
+        displayMessageSnackbar('Search error. Check your API key and parameters and try again.')
+      })
+  }
+
   const [prevPageToken, setPrevPageToken] = useState('')
   function getPrevSearchPage() {
-    searchVideosPromise(prevPageToken)
-      .then(scrollToTopResults)
+    searchVideos(prevPageToken)
   }
 
   const [nextPageToken, setNextPageToken] = useState('')
   function getNextSearchPage() {
-    searchVideosPromise(nextPageToken)
-      .then(scrollToTopResults)
+    searchVideos(nextPageToken)
   }
 
+  // On submit search from search workspace
   function onSubmitSearch() {
-    searchVideosPromise()
+    searchVideos('')
+  }
+
+  // Check if videos are requested first or downloaded next and format results
+  function checkYoutubeResultVideos(videos) {
+    const searchCandidateVideos = videos.map(result => {
+      const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id.videoId)
+
+      if (requestedVideoWithSameId === undefined) {
+        const downloadedVideoWithSameId = downloadedVideosDb.find(video => video.youtubeData.id === result.id.videoId)
+
+        if (downloadedVideoWithSameId === undefined) {
+          const newVideo = {
+            youtubeData: {
+              id: result.id.videoId,
+              title: result.snippet.title,
+              mediumThumbnail: result.snippet.thumbnails.medium
+            },
+            downloadState: 'none',
+            downloadPercent: 0,
+            isSelected: false
+          }
+
+          return newVideo
+        } else {
+          return downloadedVideoWithSameId
+        }
+      } else {
+        return requestedVideoWithSameId
+      }
+    })
+
+    return searchCandidateVideos
   }
 
   // Get videos from youtube with options and check if videos are already requested or downloaded
-  function searchVideosPromise(pageToken = '') {
+  function searchVideosWithPageToken(pageToken = '') {
     return new Promise((resolve, reject) => {
-      if (!youtubeApiKey) {
-        displayMessageSnackbar('You need a Youtube Api Key to search. Set it in the app menu.')
-        reject()
-      }
-
       const params = {
         term: textInput,
         maxResults,
@@ -143,45 +201,9 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
       youTube.search(textInput, maxResults, params, function (error, youtubeResults) {
         if (error) {
-          displayMessageSnackbar('Search error. Check your API key and parameters and try again.')
+          reject()
         } else {
-
-          // Page tokens
-          setPrevPageToken(youtubeResults.prevPageToken)
-          setNextPageToken(youtubeResults.nextPageToken)
-
-          // Results
-          let searchCandidateVideos = youtubeResults.items.map(result => {
-            const requestedVideoWithSameId = requestedVideos.find(video => video.youtubeData.id === result.id.videoId)
-
-            if (requestedVideoWithSameId === undefined) {
-              const downloadedVideoWithSameId = downloadedVideosDb.find(video => video.youtubeData.id === result.id.videoId)
-
-              if (downloadedVideoWithSameId === undefined) {
-                const newVideo = {
-                  youtubeData: {
-                    id: result.id.videoId,
-                    title: result.snippet.title,
-                    mediumThumbnail: result.snippet.thumbnails.medium
-                  },
-                  downloadState: 'none',
-                  downloadPercent: 0,
-                  isSelected: false
-                }
-
-                return newVideo
-              } else {
-                return downloadedVideoWithSameId
-              }
-            } else {
-              return requestedVideoWithSameId
-            }
-
-          })
-
-          setCandidateVideos(searchCandidateVideos)
-
-          resolve()
+          resolve(youtubeResults)
         }
       })
     })
@@ -642,13 +664,13 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   const downloadedVideoUrls = useMemo(() => {
     return downloadedVideosDb.reduce((urlsObj, videoData) => (
-      { ...urlsObj, [videoData.youtubeData.id]: getVideoPath(videoData.youtubeData.id) }
+      { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoPath(videoData.youtubeData.id) }
     ), {})
   }, [downloadedVideosDb, getVideoPath])
 
   const downloadedVideoThumbnailUrls = useMemo(() => {
     return downloadedVideosDb.reduce((urlsObj, videoData) => (
-      { ...urlsObj, [videoData.youtubeData.id]: getVideoThumbnailPathFromId(videoData.youtubeData.id) }
+      { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoThumbnailPathFromId(videoData.youtubeData.id) }
     ), {})
   }, [downloadedVideosDb, getVideoThumbnailPathFromId])
 
@@ -659,6 +681,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
         return (
           <SearchWorkspace
             searchParams={{ textInput, maxResults, order, videoDuration, videoLicense }}
+            isSearching={isSearching}
             onSetTextInput={setTextInput} onSetMaxResults={setMaxResults} onSetOrder={setOrder}
             onSetVideoDuration={setVideoDuration} onSetVideoLicense={setVideoLicense}
             prevPageToken={prevPageToken}

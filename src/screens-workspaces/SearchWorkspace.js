@@ -2,7 +2,7 @@ import './SearchWorkspace.css'
 
 import React, { useState, useEffect } from 'react'
 
-import { Typography, TextField, MenuItem, Button, Divider, Grid, GridList, GridListTile } from '@material-ui/core'
+import { Typography, TextField, MenuItem, Button, Divider, Grid, GridList, GridListTile, CircularProgress } from '@material-ui/core'
 import Slider from '@material-ui/lab/Slider'
 
 import SelectAllIcon from '@material-ui/icons/SelectAll'
@@ -22,6 +22,7 @@ const Mousetrap = require('mousetrap')
 // Search videos to get candidates and filter them
 export default function SearchWorkspace({
   searchParams,
+  isSearching,
   onSetTextInput, onSetMaxResults, onSetOrder, onSetVideoDuration, onSetVideoLicense,
   prevPageToken, nextPageToken,
   onClickPrevPage, onClickNextPage,
@@ -201,6 +202,14 @@ export default function SearchWorkspace({
           {/* Anchor element to scroll to top */}
           <div id="search-results-top"></div>
 
+          {
+            isSearching ? (
+              <div className="searching-state">
+                <CircularProgress color="secondary" />
+              </div>
+            ) : null
+          }
+
           <GridList cellHeight={'auto'} cols={numCols} spacing={10}>
             {
               videos.map(candidateVideo => {
@@ -228,29 +237,30 @@ export default function SearchWorkspace({
               })
             }
           </GridList>
-          <div className="page-controls">
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={onClickPrevPage}
-              disabled={!prevPageToken}
-            >
-              <NavigateBeforeIcon className="right-margin" />
-              Previous page
-            </Button>
-
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={onClickNextPage}
-              disabled={!nextPageToken}
-            >
-              <NavigateNextIcon className="right-margin" />
-              Next page
-            </Button>
-
-          </div>
         </div>
+
+        <div className="page-controls">
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={onClickPrevPage}
+            disabled={!prevPageToken}
+          >
+            <NavigateBeforeIcon className="right-margin" />
+            Previous page
+          </Button>
+
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={onClickNextPage}
+            disabled={!nextPageToken}
+          >
+            <NavigateNextIcon className="right-margin" />
+            Next page
+          </Button>
+        </div>
+
       </MainPanel>
 
 

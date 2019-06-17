@@ -3,43 +3,50 @@
   justify-content: space-between;
 }
 
-.side-panel-divider {
+.SearchWorkspace .side-panel-divider {
   padding: 2em 0;
 }
 
-.slider-container {
-  padding: 2em 1em;
-  height: 60px;
+.SearchWorkspace .slider-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  padding: 0 1em;
 }
 
-.search-results {
-  height: calc(100vh - 64px - 60px);
-  /* all height - TopBar - slider-container */
+.SearchWorkspace .search-results {
+  /* all height - TopBar(64) - slider-container(50) -page-controls(50) */
+  height: calc(100vh - 164px);
   overflow-y: scroll;
   padding: 1em;
 }
 
-.button-top-margin {
+.SearchWorkspace .button-top-margin {
   margin-top: 0.5em;
 }
 
-.grid-tile div:first-of-type {
+.SearchWorkspace .grid-tile div:first-of-type {
   overflow: visible;
 }
 
-.divided-scroll {
+.SearchWorkspace .divided-scroll {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px - 32px);
+  /*all height - TopBar(64) - slider-container(50)*/
+  height: calc(100vh - 114px);
   margin: 0;
   padding: 0;
 }
 
-.scroll-requested {
+.SearchWorkspace .scroll-requested {
   overflow-y: scroll;
+  margin: 0 -1em;
+  padding: 0 1em;
 }
 
-.margin-bottom {
+.SearchWorkspace .margin-bottom {
   margin-bottom: 2em;
 }
 
@@ -47,10 +54,19 @@
   margin-right: 0.5em;
 }
 
-.page-controls {
+.SearchWorkspace .page-controls {
   display: flex;
   width: 100%;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1em;
+  height: 50px;
+  padding: 0 1em;
+}
+
+.SearchWorkspace .searching-state {
+  display: flex;
+  width: 100%;
+  height: 10em;
+  justify-content: center;
+  align-items: center;
 }
