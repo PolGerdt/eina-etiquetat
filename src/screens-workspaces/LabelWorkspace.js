@@ -113,8 +113,26 @@ export default function LabelWorkspace({
     onClickOneLabelMode(e.target.checked)
   }
 
-  // Checks the next video not done and sets the current video
+  const loadPrevVideo = useCallback(
+    () => {
+      const currentVideoIndex = assignedVideoLabels.findIndex(videoLabels => videoLabels.videoId === currentVideoId)
+      const nextVideoIndex = Math.max(0, currentVideoIndex - 1)
+      setCurrentVideoId(assignedVideoLabels[nextVideoIndex].videoId)
+    },
+    [currentVideoId, assignedVideoLabels]
+  )
+
   const loadNextVideo = useCallback(
+    () => {
+      const currentVideoIndex = assignedVideoLabels.findIndex(videoLabels => videoLabels.videoId === currentVideoId)
+      const nextVideoIndex = Math.min(assignedVideoLabels.length - 1, currentVideoIndex + 1)
+      setCurrentVideoId(assignedVideoLabels[nextVideoIndex].videoId)
+    },
+    [currentVideoId, assignedVideoLabels]
+  )
+
+  // Checks the next video not done and sets the current video
+  const loadNextVideoNoLabels = useCallback(
     () => {
       const nextVideoLabels = assignedVideoLabels.find(videoLabels => !videoLabels.isDone && videoLabels.videoId !== currentVideoId)
 
@@ -128,9 +146,9 @@ export default function LabelWorkspace({
   const onLabelsFinish = useCallback(
     () => {
       onVideoLabelsDone(currentVideoId)
-      loadNextVideo()
+      loadNextVideoNoLabels()
     },
-    [currentVideoId, loadNextVideo, onVideoLabelsDone]
+    [currentVideoId, loadNextVideoNoLabels, onVideoLabelsDone]
   )
 
   // Callback to delete video and load next if playing
@@ -139,10 +157,10 @@ export default function LabelWorkspace({
       onDeleteVideo(videoId)
 
       if (currentVideoId === videoId) {
-        loadNextVideo()
+        loadNextVideoNoLabels()
       }
     }
-    , [onDeleteVideo, currentVideoId, loadNextVideo])
+    , [onDeleteVideo, currentVideoId, loadNextVideoNoLabels])
 
   const isVideoDone = useCallback(
     (videoId) => assignedVideoLabels.find(assignedLabels => assignedLabels.videoId === videoId && assignedLabels.isDone)
@@ -166,12 +184,16 @@ export default function LabelWorkspace({
   useEffect(() => {
     Mousetrap.bind(['ctrl+f', 'command+f'], () => onLabelsFinish())
     Mousetrap.bind(['ctrl+x', 'command+x'], () => deleteLastOpenLabel())
+    Mousetrap.bind(['ctrl+up', 'command+up'], () => loadPrevVideo())
+    Mousetrap.bind(['ctrl+down', 'command+down'], () => loadNextVideo())
 
     return () => {
       Mousetrap.unbind(['ctrl+f', 'command+f'])
       Mousetrap.unbind(['ctrl+x', 'command+x'])
+      Mousetrap.bind(['ctrl+up', 'command+up'])
+      Mousetrap.bind(['ctrl+down', 'command+down'])
     }
-  }, [onLabelsFinish, deleteLastOpenLabel])
+  }, [onLabelsFinish, deleteLastOpenLabel, loadPrevVideo, loadNextVideo])
 
   const [extractFps, setExtractFps] = useState(1)
   const [extractNum, setExtractNum] = useState(10)

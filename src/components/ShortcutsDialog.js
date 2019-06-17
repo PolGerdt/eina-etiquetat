@@ -66,6 +66,21 @@ export default function ShortcutsDialog({ isOpen, onClose }) {
                   <List>
                     <ListItem>
                       <ListItemText
+                        primary="Load previous video"
+                        secondary="Ctrl/Command + Up Arrow"
+                      />
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="Load next video"
+                        secondary="Ctrl/Command + Down Arrow"
+                      />
+                    </ListItem>
+
+                    <Divider />
+
+                    <ListItem>
+                      <ListItemText
                         primary="Video step backward"
                         secondary="Left Arrow"
                       />
