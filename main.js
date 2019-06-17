@@ -30,6 +30,7 @@ function createWindow() {
     height: 768,
     title: 'Eina Etiquetat',
     webPreferences: {
+      nodeIntegration: true,
       webSecurity: false // To load videos from other folders. Only needed in dev mode ?
     },
     show: false
@@ -69,6 +70,20 @@ function createWindow() {
     if (dev) {
       const template = [
         {
+          label: "Application",
+          submenu: [
+            { label: "Quit", accelerator: "CmdOrCtrl+Q", click: function () { app.quit() } }
+          ]
+        },
+        {
+          label: 'Edit',
+          submenu: [
+            { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
+            { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
+            { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:" }
+          ]
+        },
+        {
           label: 'Dev',
           submenu: [
             { role: 'reload' },
@@ -85,10 +100,28 @@ function createWindow() {
       ]
 
       menu = Menu.buildFromTemplate(template)
-      //Menu.setApplicationMenu(menu)
-      mainWindow.setMenu(menu)
+      Menu.setApplicationMenu(menu)
+    } else {
+      const template = [
+        {
+          label: "Application",
+          submenu: [
+            { label: "Quit", accelerator: "CmdOrCtrl+Q", click: function () { app.quit() } }
+          ]
+        },
+        {
+          label: 'Edit',
+          submenu: [
+            { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
+            { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
+            { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:" }
+          ]
+        }
+      ]
+
+      menu = Menu.buildFromTemplate(template)
+      Menu.setApplicationMenu(menu)
     }
-    mainWindow.setMenu(menu)
   })
 
   // Emitted when the window is closed.
