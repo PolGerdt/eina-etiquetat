@@ -64,9 +64,9 @@ export default function SearchWorkspace({
 
     return () => {
       Mousetrap.unbind(['command+e', 'ctrl+e'])
-      Mousetrap.bind(['command+d', 'ctrl+d'])
-      Mousetrap.bind(['command+left', 'ctrl+left'])
-      Mousetrap.bind(['command+right', 'ctrl+right'])
+      Mousetrap.unbind(['command+d', 'ctrl+d'])
+      Mousetrap.unbind(['command+left', 'ctrl+left'])
+      Mousetrap.unbind(['command+right', 'ctrl+right'])
     }
   }, [onSelectAll, onInvertSelection, onClickPrevPage, onClickNextPage])
 

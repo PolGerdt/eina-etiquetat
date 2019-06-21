@@ -23,7 +23,11 @@ export default function LabelWorkspace({
   isOneLabelMode,
   onAssignLabel, onDeleteAssignedLabel,
   onVideoLabelsDone,
-  onClickExportLabels, onClickTrimSegments, onClickExtractFramesFps, onClickExtractNFrames,
+  onClickExportLabels, 
+  onClickTrimSegments, 
+  extractFps, extractNum,
+  onChangeExtractFps, onChangeExtractNum,
+  onClickExtractFramesFps, onClickExtractNFrames,
   onClickOneLabelMode,
   onDeleteVideo
 }) {
@@ -190,13 +194,10 @@ export default function LabelWorkspace({
     return () => {
       Mousetrap.unbind(['ctrl+f', 'command+f'])
       Mousetrap.unbind(['ctrl+x', 'command+x'])
-      Mousetrap.bind(['ctrl+up', 'command+up'])
-      Mousetrap.bind(['ctrl+down', 'command+down'])
+      Mousetrap.unbind(['ctrl+up', 'command+up'])
+      Mousetrap.unbind(['ctrl+down', 'command+down'])
     }
   }, [onLabelsFinish, deleteLastOpenLabel, loadPrevVideo, loadNextVideo])
-
-  const [extractFps, setExtractFps] = useState(1)
-  const [extractNum, setExtractNum] = useState(10)
 
   // Memoized downloaded videos list to optimize use
   const downloadedVideoCards = useMemo(
@@ -351,7 +352,7 @@ export default function LabelWorkspace({
             <TextField
               label="Framerate"
               value={extractFps}
-              onChange={(e) => setExtractFps(e.target.value)}
+              onChange={(e) => onChangeExtractFps(e.target.value)}
               type="number"
               margin="normal"
             />
@@ -370,7 +371,7 @@ export default function LabelWorkspace({
             <TextField
               label="Number of frames"
               value={extractNum}
-              onChange={(e) => setExtractNum(e.target.value)}
+              onChange={(e) => onChangeExtractNum(e.target.value)}
               type="number"
               margin="normal"
             />

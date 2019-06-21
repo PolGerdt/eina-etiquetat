@@ -23,7 +23,23 @@ const imgDownload = require('image-downloader')
 const { spawn } = require('child_process')
 
 const youTube = new YouTube()
+
 let projectDataDb = null
+
+function deleteFolderRecursive(path) {
+  if (fs.existsSync(path)) {
+    fs.readdirSync(path).forEach(function (file) {
+      var curPath = path + "/" + file
+      if (fs.lstatSync(curPath).isDirectory()) { // recurse
+        deleteFolderRecursive(curPath)
+      } else {
+        // delete file
+        fs.unlinkSync(curPath)
+      }
+    })
+    fs.rmdirSync(path)
+  }
+}
 
 function useProjectDataFieldDb(projectPath, field, defaultState) {
 
@@ -105,6 +121,31 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     document.getElementById('search-results-top').scrollIntoView(true)
   }
 
+  // Get videos from youtube with options and check if videos are already requested or downloaded
+  function searchVideosWithPageToken(pageToken = '') {
+    return new Promise((resolve, reject) => {
+      const params = {
+        term: textInput,
+        maxResults,
+        order,
+        videoDuration,
+        videoLicense,
+        pageToken,
+        key: youtubeApiKey,
+        type: 'video',
+        part: 'snippet'
+      }
+
+      youTube.search(textInput, maxResults, params, function (error, youtubeResults) {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(youtubeResults)
+        }
+      })
+    })
+  }
+
   const [isSearching, setIsSearching] = useState(false)
 
   // Search videos with a page token and set isSearching status
@@ -128,7 +169,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
         // Set display and state
         setIsSearching(false)
         scrollToTopResults()
-      }, () => {
+      }, (err) => {
         setIsSearching(false)
         displayMessageSnackbar('Search error. Check your API key and parameters and try again.')
       }).catch((err) => {
@@ -182,31 +223,6 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     })
 
     return searchCandidateVideos
-  }
-
-  // Get videos from youtube with options and check if videos are already requested or downloaded
-  function searchVideosWithPageToken(pageToken = '') {
-    return new Promise((resolve, reject) => {
-      const params = {
-        term: textInput,
-        maxResults,
-        order,
-        videoDuration,
-        videoLicense,
-        pageToken,
-        key: youtubeApiKey,
-        type: 'video',
-        part: 'snippet'
-      }
-
-      youTube.search(textInput, maxResults, params, function (error, youtubeResults) {
-        if (error) {
-          reject()
-        } else {
-          resolve(youtubeResults)
-        }
-      })
-    })
   }
 
   function toggleVideoSelection(videoId) {
@@ -291,15 +307,29 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   function onVideoDownloadProgress(videoId, percentage) {
     setCandidateVideos(previousVideos => previousVideos.map(video => (video.youtubeData.id === videoId) ?
-      { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
-      video
+      { ...video, downloadPercent: percentage, downloadState: 'downloading' } : video
     ))
 
     setRequestedVideos(previous => previous.map(video => (video.youtubeData.id === videoId) ?
-      { ...video, downloadPercent: percentage, downloadState: 'downloading' } :
-      video
+      { ...video, downloadPercent: percentage, downloadState: 'downloading' } : video
     ))
   }
+
+  const [allAssignedLabelsDb, setAllAssignedLabelsDb] = useProjectDataFieldDb(projectPath, 'assignedLabels', [])
+  /*
+  [
+    {
+      videoId: '',
+      labels: [
+        {id, labelName, inTime, outTime}
+      ],
+      isDone: false,
+      isTrimmed: false,
+      areFpsFramesExtracted: false,
+      areNFramesExtracted: false
+    }
+  ]
+  */
 
   function onVideoDownloaded(videoId) {
     const videoData = requestedVideos.find(video => video.youtubeData.id === videoId)
@@ -321,16 +351,26 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     )
 
     // Add an empty assignedLabels object
-    setAllAssignedLabelsDb(previous => [...previous, { videoId, labels: [], isDone: false }])
+    setAllAssignedLabelsDb(previous => [
+      ...previous,
+      {
+        videoId, labels: [], isDone: false,
+        isTrimmed: false, areFpsFramesExtracted: false, areNFramesExtracted: false
+      }
+    ])
 
     // Save video thumbnail
     const opts = {
       url: videoData.youtubeData.mediumThumbnail.url,
       dest: getVideoThumbnailPathFromId(videoId)
     }
-    imgDownload.image(opts).catch((err) => {
-      // Thumbnail download error
-    })
+    imgDownload.image(opts)
+      .then(() => {
+        setDownloadedVideosDb(previous => [...previous])
+      })
+      .catch((err) => {
+        // Thumbnail download error
+      })
   }
 
   const nextRequestedVideo = requestedVideos.find(video => video.downloadState === 'requested')
@@ -357,7 +397,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     setRequestedVideos(previous => [...selectedVideos, ...previous])
   }
 
-  const getVideoPath = useCallback((videoId) => {
+  const getVideoPathFromId = useCallback((videoId) => {
     return path.join(projectPath, 'videos_full', videoId + '.mp4')
   }, [projectPath])
 
@@ -379,25 +419,10 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
       setRequestedVideos([])
 
-      fs.unlinkSync(getVideoPath(downloadingVideo.youtubeData.id))
-
       ytWriteableStream.current.destroy()
       ytReadableStream.current.destroy()
     }
   }
-
-  const [allAssignedLabelsDb, setAllAssignedLabelsDb] = useProjectDataFieldDb(projectPath, 'assignedLabels', [])
-  /*
-  [
-    {
-      videoId: '',
-      labels: [
-        {id, labelName, inTime, outTime}
-      ],
-      isDone: false
-    }
-  ]
-  */
 
   // Creates a labels object if it does not exist or appends the new label
   function assignLabel(videoId, label) {
@@ -407,7 +432,8 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
           {
             ...videoLabels,
             labels: [label, ...videoLabels.labels],
-            isDone: false
+            isDone: false,
+            isTrimmed: false, areFpsFramesExtracted: false, areNFramesExtracted: false
           }
         ) :
         videoLabels
@@ -422,7 +448,8 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
           {
             ...videoLabels,
             labels: videoLabels.labels.filter(label => label.id !== labelId),
-            isDone: false
+            isDone: false,
+            isTrimmed: false, areFpsFramesExtracted: false, areNFramesExtracted: false
           }
         ) :
         videoLabels
@@ -433,8 +460,10 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   function onVideoLabelsDone(videoId) {
     setAllAssignedLabelsDb(previous =>
       previous.map(videoLabels => (videoLabels.videoId === videoId) ?
-        ({ ...videoLabels, isDone: true }) :
-        videoLabels
+        ({
+          ...videoLabels, isDone: true,
+          isTrimmed: false, areFpsFramesExtracted: false, areNFramesExtracted: false
+        }) : videoLabels
       )
     )
   }
@@ -462,187 +491,273 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   // Reduce 2D array of labels [video0 : { labels: []}, video1: { labels: []}...] to promises and resolve sequentially
   function trimSegmentsPromise(doneLabels) {
+    return new Promise((resolveAllVideos, rejectAllVideos) => {
+      doneLabels.reduce((videoPromise, videoLabels) => {
+        return videoPromise.then(() => {
+          return new Promise((resolveVideo, rejectVideo) => {
+            const inputVideoPath = getVideoPathFromId(videoLabels.videoId)
 
-    return doneLabels.reduce((videoPromise, videoLabels) => {
+            const videoSegmentsPath = path.join(projectPath, 'video_segments', videoLabels.videoId)
 
-      return videoPromise.then(() => {
+            if (fs.existsSync(videoSegmentsPath)) {
+              deleteFolderRecursive(videoSegmentsPath)
+            }
 
-        const inputVideoPath = getVideoPath(videoLabels.videoId)
+            fs.mkdirSync(videoSegmentsPath)
 
-        const videoSegmentsPath = path.join(projectPath, 'video_segments', videoLabels.videoId)
+            videoLabels.labels.reduce((labelPromise, label) => {
+              return labelPromise.then(() => {
+                return new Promise((resolveLabel, rejectLabel) => {
+                  const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}.mp4`
+                  const segmentPath = path.join(videoSegmentsPath, segmentName)
 
-        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
+                  const process = spawn('ffmpeg',
+                    ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-c", "copy", segmentPath, "-hide_banner"]
+                  )
 
-        return videoLabels.labels.reduce((labelPromise, label) => {
+                  process.on('exit', (statusCode) => {
+                    if (statusCode === 0) {
+                      // segment saved
+                      resolveLabel()
+                    }
+                  })
 
-          return labelPromise.then(() => {
-
-            return new Promise((resolve, reject) => {
-              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}.mp4`
-              const segmentPath = path.join(videoSegmentsPath, segmentName)
-
-              const process = spawn('ffmpeg',
-                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-c", "copy", segmentPath, "-hide_banner"]
-              )
-
-              process.on('exit', (statusCode) => {
-                if (statusCode === 0) {
-                  // segment saved
-                  resolve()
-                }
+                  process.stderr.on('data', (err) => {
+                    // segment error
+                    rejectLabel()
+                  })
+                })
+              }).catch(err => {
+                // video segment error
               })
+            }, Promise.resolve())
+              .then(() => {
+                // All labels from video done
+                setAllAssignedLabelsDb(previous =>
+                  previous.map(prevVideoLabels => (prevVideoLabels.videoId === videoLabels.videoId) ?
+                    ({ ...prevVideoLabels, isTrimmed: true }) : prevVideoLabels
+                  )
+                )
 
-              process.stderr.on('data', (err) => {
-                // segment error
-                reject()
+                resolveVideo()
+              }).catch(err => {
+                rejectVideo()
               })
-            })
-          }).catch(err => {
-            // video segment error
           })
-        }, Promise.resolve())
-      }).catch(err => {
-        // all videos error
-      })
-    }, Promise.resolve())
+        }).catch(err => {
+          // Video error
+        })
+      }, Promise.resolve())
+        .then(resolveAllVideos)
+        .catch(rejectAllVideos)
+    })
   }
 
-  // Trim videos with done assigned labels
+  // Trim videos with done assigned labels and not trimmed
   function onClickTrimSegments() {
-    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
-    if (doneLabels.length > 0) {
+    const videoLabelsToTrim = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone && !videoLabels.isTrimmed)
+
+    if (videoLabelsToTrim.length > 0) {
       displayMessageSnackbar('Trimming videos...')
 
-      trimSegmentsPromise(doneLabels).then(() => {
-        displayMessageSnackbar('Segments saved to your project folder...')
-      })
+      trimSegmentsPromise(videoLabelsToTrim)
+        .then(() => {
+          displayMessageSnackbar('Segments saved to your project folder...')
+        })
+    } else {
+      displayMessageSnackbar('No segments to trim.')
     }
   }
 
   // Extract frames from each video and label at a framerate
-  function extractFramesFpsPromise(doneLabels, fps = 1) {
+  function extractFramesFpsPromise(doneLabels, fps) {
+    return new Promise((resolveAllVideos, rejectAllVideos) => {
+      doneLabels.reduce((videoPromise, videoLabels) => {
+        return videoPromise.then(() => {
+          return new Promise((resolveVideo, rejectVideo) => {
+            const inputVideoPath = getVideoPathFromId(videoLabels.videoId)
 
-    return doneLabels.reduce((videoPromise, videoLabels) => {
+            const videoSegmentsPath = path.join(projectPath, 'extracted_fps_frames', videoLabels.videoId)
+            if (fs.existsSync(videoSegmentsPath)) {
+              deleteFolderRecursive(videoSegmentsPath)
+            }
 
-      return videoPromise.then(() => {
+            fs.mkdirSync(videoSegmentsPath)
 
-        const inputVideoPath = getVideoPath(videoLabels.videoId)
 
-        const videoSegmentsPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
-        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
+            videoLabels.labels.reduce((labelPromise, label) => {
 
-        return videoLabels.labels.reduce((labelPromise, label) => {
+              return labelPromise.then(() => {
 
-          return labelPromise.then(() => {
-
-            const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
-            if (!fs.existsSync(videoLabelPath)) fs.mkdirSync(videoLabelPath)
-
-            return new Promise((resolve, reject) => {
-              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
-              const segmentPath = path.join(videoLabelPath, segmentName)
-
-              const process = spawn('ffmpeg',
-                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
-              )
-
-              process.on('exit', (statusCode) => {
-                if (statusCode === 0) {
-                  // frames saved
-                  resolve()
+                const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
+                if (fs.existsSync(videoLabelPath)) {
+                  deleteFolderRecursive(videoLabelPath)
                 }
-              })
 
-              process.stderr.on('data', (err) => {
-                // label error
-                reject()
+                fs.mkdirSync(videoLabelPath)
+
+                return new Promise((resolveLabel, rejectLabel) => {
+                  const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
+                  const segmentPath = path.join(videoLabelPath, segmentName)
+
+                  const process = spawn('ffmpeg',
+                    ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
+                  )
+
+                  process.on('exit', (statusCode) => {
+                    if (statusCode === 0) {
+                      // frames saved
+                      resolveLabel()
+                    }
+                  })
+
+                  process.stderr.on('data', (err) => {
+                    // label error
+                    rejectLabel()
+                  })
+                })
+              }).catch(err => {
+                // video error
               })
-            })
-          }).catch(err => {
-            // video error
+            }, Promise.resolve())
+              .then(() => {
+                setAllAssignedLabelsDb(previous =>
+                  previous.map(prevVideoLabels => (prevVideoLabels.videoId === videoLabels.videoId) ?
+                    ({ ...prevVideoLabels, areFpsFramesExtracted: true }) : prevVideoLabels
+                  )
+                )
+                resolveVideo()
+              })
+              .catch(rejectVideo)
           })
-        }, Promise.resolve())
-      }).catch(err => {
-        // all videos error
-      })
-    }, Promise.resolve())
-  }
-
-  function onClickExtractFramesFps(fps) {
-    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
-    if (doneLabels.length > 0) {
-      displayMessageSnackbar('Extracting frames...')
-
-      extractFramesFpsPromise(doneLabels, fps).then(() => {
-        displayMessageSnackbar('Frames extracted to your project folder.')
-      })
-    }
+        }).catch(err => {
+          // all videos error
+        })
+      }, Promise.resolve())
+        .then(resolveAllVideos)
+        .catch(rejectAllVideos)
+    })
   }
 
   // Extract N frames for each label and video
   function extractNFramesPromise(doneLabels, numFrames) {
+    return new Promise((resolveAllVideos, rejectAllVideos) => {
+      doneLabels.reduce((videoPromise, videoLabels) => {
+        return videoPromise.then(() => {
+          return new Promise((resolveVideo, rejectVideo) => {
+            const inputVideoPath = getVideoPathFromId(videoLabels.videoId)
 
-    return doneLabels.reduce((videoPromise, videoLabels) => {
+            const videoSegmentsPath = path.join(projectPath, 'extracted_n_frames', videoLabels.videoId)
+            if (fs.existsSync(videoSegmentsPath)) {
+              deleteFolderRecursive(videoSegmentsPath)
+            }
 
-      return videoPromise.then(() => {
+            fs.mkdirSync(videoSegmentsPath)
 
-        const inputVideoPath = getVideoPath(videoLabels.videoId)
+            videoLabels.labels.reduce((labelPromise, label) => {
 
-        const videoSegmentsPath = path.join(projectPath, 'extracted_frames', videoLabels.videoId)
-        if (!fs.existsSync(videoSegmentsPath)) fs.mkdirSync(videoSegmentsPath)
+              return labelPromise.then(() => {
 
-        return videoLabels.labels.reduce((labelPromise, label) => {
+                const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
 
-          return labelPromise.then(() => {
 
-            const videoLabelPath = path.join(videoSegmentsPath, label.labelName + '_' + label.id)
-            if (!fs.existsSync(videoLabelPath)) fs.mkdirSync(videoLabelPath)
-
-            return new Promise((resolve, reject) => {
-              const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
-              const segmentPath = path.join(videoLabelPath, segmentName)
-
-              const fps = numFrames / (label.outTime - label.inTime)
-
-              const process = spawn('ffmpeg',
-                ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
-              )
-
-              process.on('exit', (statusCode) => {
-                if (statusCode === 0) {
-                  // frames saved
-                  resolve()
+                if (fs.existsSync(videoLabelPath)) {
+                  deleteFolderRecursive(videoLabelPath)
                 }
-              })
 
-              process.stderr.on('data', (err) => {
-                // label error
-                reject()
+                fs.mkdirSync(videoLabelPath)
+
+                return new Promise((resolve, reject) => {
+                  const segmentName = `${videoLabels.videoId}_${label.labelName}_${Math.floor(1000 * label.inTime)}-${Math.floor(1000 * label.outTime)}_%03d.jpg`
+                  const segmentPath = path.join(videoLabelPath, segmentName)
+
+                  const fps = numFrames / (label.outTime - label.inTime)
+
+                  const process = spawn('ffmpeg',
+                    ["-ss", label.inTime, "-i", inputVideoPath, "-to", label.outTime - label.inTime, "-vf", `fps=${fps}`, segmentPath, "-hide_banner"]
+                  )
+
+                  process.on('exit', (statusCode) => {
+                    if (statusCode === 0) {
+                      // frames saved
+                      resolve()
+                    }
+                  })
+
+                  process.stderr.on('data', (err) => {
+                    // label error
+                    reject()
+                  })
+                })
+              }).catch(err => {
+                // video error 
               })
-            })
-          }).catch(err => {
-            // video error 
+            }, Promise.resolve())
+              .then(() => {
+                setAllAssignedLabelsDb(previous =>
+                  previous.map(prevVideoLabels => (prevVideoLabels.videoId === videoLabels.videoId) ?
+                    ({ ...prevVideoLabels, areNFramesExtracted: true }) : prevVideoLabels
+                  )
+                )
+                resolveVideo()
+              })
+              .catch(rejectVideo)
           })
-        }, Promise.resolve())
-      }).catch(err => {
-        // all videos error 
-      })
-    }, Promise.resolve())
+        }).catch(err => {
+          // all videos error 
+        })
+      }, Promise.resolve())
+        .then(resolveAllVideos)
+        .catch(rejectAllVideos)
+    })
   }
 
-  function onClickExtractNFrames(num) {
-    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone)
-    if (doneLabels.length > 0) {
+  const [extractFps, setExtractFps] = useState(1)
+  // On change reset extracted status
+  function onChangeExtractFps(fps) {
+    setAllAssignedLabelsDb(previous =>
+      previous.map(prevVideoLabels => ({ ...prevVideoLabels, areFpsFramesExtracted: false }))
+    )
+    setExtractFps(fps)
+  }
+
+  function onClickExtractFramesFps() {
+    const videoLabelsToExtract = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone && !videoLabels.areFpsFramesExtracted)
+    if (videoLabelsToExtract.length > 0) {
       displayMessageSnackbar('Extracting frames...')
-      extractNFramesPromise(doneLabels, num).then(() => {
+
+      extractFramesFpsPromise(videoLabelsToExtract, extractFps).then(() => {
         displayMessageSnackbar('Frames extracted to your project folder.')
       })
+    } else {
+      displayMessageSnackbar('No frames to extract.')
+    }
+  }
+
+  const [extractNum, setExtractNum] = useState(10)
+  // On change reset extracted status
+  function onChangeExtractNum(num) {
+    setAllAssignedLabelsDb(previous =>
+      previous.map(prevVideoLabels => ({ ...prevVideoLabels, areNFramesExtracted: false }))
+    )
+    setExtractNum(num)
+  }
+
+  function onClickExtractNFrames() {
+    const doneLabels = allAssignedLabelsDb.filter(videoLabels => videoLabels.isDone && !videoLabels.areNFramesExtracted)
+    if (doneLabels.length > 0) {
+      displayMessageSnackbar('Extracting frames...')
+      extractNFramesPromise(doneLabels, extractNum).then(() => {
+        displayMessageSnackbar('Frames extracted to your project folder.')
+      })
+    } else {
+      displayMessageSnackbar('No frames to extract.')
     }
   }
 
   // Delete a downloaded video from disc and database and delete assigned labels
   function deleteDownloadedVideo(videoId) {
-    const videoPath = getVideoPath(videoId)
+    const videoPath = getVideoPathFromId(videoId)
     const videoExists = fs.existsSync(videoPath)
 
     if (videoExists) {
@@ -664,9 +779,9 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
 
   const downloadedVideoUrls = useMemo(() => {
     return downloadedVideosDb.reduce((urlsObj, videoData) => (
-      { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoPath(videoData.youtubeData.id) }
+      { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoPathFromId(videoData.youtubeData.id) }
     ), {})
-  }, [downloadedVideosDb, getVideoPath])
+  }, [downloadedVideosDb, getVideoPathFromId])
 
   const downloadedVideoThumbnailUrls = useMemo(() => {
     return downloadedVideosDb.reduce((urlsObj, videoData) => (
@@ -715,7 +830,11 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
             onClickExportLabels={exportAssignedLabels}
             onClickTrimSegments={onClickTrimSegments}
             onClickOneLabelMode={onClickOneLabelMode}
+            extractFps={extractFps}
+            extractNum={extractNum}
+            onChangeExtractFps={onChangeExtractFps}
             onClickExtractFramesFps={onClickExtractFramesFps}
+            onChangeExtractNum={onChangeExtractNum}
             onClickExtractNFrames={onClickExtractNFrames}
             onDeleteVideo={deleteDownloadedVideo}
           />
