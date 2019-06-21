@@ -331,6 +331,13 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   ]
   */
 
+  const [downloadedVideoThumbnailUrls, setDownloadedVideoThumbnailUrls] = useState({})
+  function onThumbnailDownloaded(videoId) {
+    setDownloadedVideoThumbnailUrls(previous => (
+      { ...previous, [videoId]: 'file://' + getVideoThumbnailPathFromId(videoId) }
+    ))
+  }
+
   function onVideoDownloaded(videoId) {
     const videoData = requestedVideos.find(video => video.youtubeData.id === videoId)
 
@@ -366,7 +373,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
     }
     imgDownload.image(opts)
       .then(() => {
-        setDownloadedVideosDb(previous => [...previous])
+        onThumbnailDownloaded(videoId)
       })
       .catch((err) => {
         // Thumbnail download error
@@ -782,12 +789,6 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
       { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoPathFromId(videoData.youtubeData.id) }
     ), {})
   }, [downloadedVideosDb, getVideoPathFromId])
-
-  const downloadedVideoThumbnailUrls = useMemo(() => {
-    return downloadedVideosDb.reduce((urlsObj, videoData) => (
-      { ...urlsObj, [videoData.youtubeData.id]: 'file://' + getVideoThumbnailPathFromId(videoData.youtubeData.id) }
-    ), {})
-  }, [downloadedVideosDb, getVideoThumbnailPathFromId])
 
   // Scene setup
   const getWorkspace = (workspace) => {
