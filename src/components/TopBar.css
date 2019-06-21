@@ -3,6 +3,13 @@
   justify-content: space-between;
 }
 
+.TopBar .bar-left {
+  width: 30vw;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
 .TopBar .tab-grow {
   flex-grow: 1;
 }
@@ -17,4 +24,11 @@
 
 .margin-right {
   margin-right: 0.5em;
+}
+
+.TopBar .bar-right {
+  width: 30vw;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }

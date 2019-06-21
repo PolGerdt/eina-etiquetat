@@ -63,7 +63,11 @@ function useProjectDataFieldDb(projectPath, field, defaultState) {
   return [fieldData, setFieldData]
 }
 
-export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig, projectPath, isShowingStatsDialog, onCloseStatsDialog }) {
+export default function ProjectScreen({
+  youtubeApiKey, workspace, projectConfig,
+  projectPath, isShowingStatsDialog, onCloseStatsDialog,
+  onChangeWorkingState
+}) {
 
   const [candidateVideos, setCandidateVideos] = useState([])
   const [requestedVideos, setRequestedVideos] = useState([])
@@ -381,12 +385,20 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   }
 
   const nextRequestedVideo = requestedVideos.find(video => video.downloadState === 'requested')
-
   const downloadingVideo = requestedVideos.find(video => video.downloadState === 'downloading')
 
   if (nextRequestedVideo && downloadingVideo === undefined) {
     downloadVideo(nextRequestedVideo.youtubeData.id)
   }
+
+  // If there is some requested videos set working state to true
+  useEffect(() => {
+    if (requestedVideos.length > 0) {
+      onChangeWorkingState(true)
+    } else {
+      onChangeWorkingState(false)
+    }
+  }, [onChangeWorkingState, requestedVideos])
 
   // Set all selected videos to requested download state
   function downloadSelectedVideos() {
@@ -416,7 +428,7 @@ export default function ProjectScreen({ youtubeApiKey, workspace, projectConfig,
   function cancelDownloads() {
     const downloadingVideos = requestedVideos.filter(video => video.downloadState === 'downloading')
 
-    if (downloadingVideos) {
+    if (downloadingVideos.length > 0) {
       setCandidateVideos(previousVideos =>
         previousVideos.map(video => video.downloadState === 'downloading' || video.downloadState === 'requested' ?
           ({ ...video, downloadState: 'none', downloadPercent: 0 }) :

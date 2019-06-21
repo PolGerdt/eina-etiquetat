@@ -174,6 +174,11 @@ export default function App() {
     }
   }
 
+  const [isWorking, setIsWorking] = useState(false)
+  function onChangeWorkingState(state) {
+    setIsWorking(state)
+  }
+
   return (
     <MuiThemeProvider theme={theme}>
       <div className="App">
@@ -183,6 +188,7 @@ export default function App() {
             onChangeScene={setCurrentWorkspace}
             disabledTabs={!isProjectOpen}
             onClickMenuItem={onClickMenuItem}
+            isWorking={isWorking}
           />
 
           <EditApiKeyDialog
@@ -209,6 +215,7 @@ export default function App() {
                 projectPath={projectPath}
                 isShowingStatsDialog={isOpenStatsDialog}
                 onCloseStatsDialog={() => setIsOpenStatsDialog(false)}
+                onChangeWorkingState={onChangeWorkingState}
               /> :
               <StartScreen
                 onClickNew={() => showProjectDialog(true)}

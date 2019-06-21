@@ -10,10 +10,9 @@ import VpnKeyIcon from '@material-ui/icons/VpnKey'
 import PollIcon from '@material-ui/icons/Poll'
 import KeyboardIcon from '@material-ui/icons/Keyboard'
 
-import { AppBar, Toolbar, IconButton, Typography, Tabs, Tab, Menu, MenuItem, Divider } from '@material-ui/core'
+import { AppBar, Toolbar, IconButton, Typography, Tabs, Tab, Menu, MenuItem, Divider, CircularProgress } from '@material-ui/core'
 
-export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenuItem }) {
-
+export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenuItem, isWorking }) {
   const [selectedTab, setSelectedTab] = useState(0)
 
   function handleTabChange(event, newValue) {
@@ -39,46 +38,52 @@ export default function TopBar({ title, onChangeScene, disabledTabs, onClickMenu
     <div className="TopBar">
       <AppBar position="static" className="app-bar">
         <Toolbar>
-          <IconButton color="inherit" onClick={handleClick}>
-            <MenuIcon />
-          </IconButton>
+          <div className="bar-left">
+            <IconButton color="inherit" onClick={handleClick}>
+              <MenuIcon />
+            </IconButton>
 
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 0)}>
-              <NoteAddIcon className="margin-right" />
-              New Project
+            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 0)}>
+                <NoteAddIcon className="margin-right" />
+                New Project
             </MenuItem>
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 1)}>
-              <FolderIcon className="margin-right" />
-              Open Project
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 1)}>
+                <FolderIcon className="margin-right" />
+                Open Project
             </MenuItem>
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 2)}>
-              <SettingsIcon className="margin-right" />
-              Edit Project Settings
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 2)}>
+                <SettingsIcon className="margin-right" />
+                Edit Project Settings
               </MenuItem>
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 3)}>
-              <PollIcon className="margin-right" />
-              Show Project Statistics
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 3)}>
+                <PollIcon className="margin-right" />
+                Show Project Statistics
               </MenuItem>
-            <Divider />
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 4)}>
-              <VpnKeyIcon className="margin-right" />
-              Set Youtube Api Key
+              <Divider />
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 4)}>
+                <VpnKeyIcon className="margin-right" />
+                Set Youtube Api Key
               </MenuItem>
-            <Divider />
-            <MenuItem onClick={(e) => handleClickMenuItem(e, 5)}>
-              <KeyboardIcon className="margin-right" />
-              Shortcuts
+              <Divider />
+              <MenuItem onClick={(e) => handleClickMenuItem(e, 5)}>
+                <KeyboardIcon className="margin-right" />
+                Shortcuts
               </MenuItem>
-          </Menu>
+            </Menu>
 
-          <Typography variant="h6" color="inherit" className="title"> {title} </Typography>
+            <Typography variant="h6" color="inherit" className="title"> {title} </Typography>
+          </div>
 
           <div className="tab-grow">
             <Tabs value={selectedTab} onChange={handleTabChange} centered>
               <Tab label="Search" disabled={disabledTabs} />
               <Tab label="Label" disabled={disabledTabs} />
             </Tabs>
+          </div>
+
+          <div className="bar-right">
+            {isWorking ? <CircularProgress color="secondary" size={30} /> : null}
           </div>
         </Toolbar>
       </AppBar>
